@@ -32,10 +32,6 @@ Thumbs.db
 .env
 .env.*
 
-# Docker
-.dockerignore
-Dockerfile
-
 # Logs and temp files
 *.log
 *.tmp
