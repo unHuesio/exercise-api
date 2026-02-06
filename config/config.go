@@ -12,17 +12,25 @@ type Config struct {
 }
 
 func Load() *Config {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found, using system environment variables")
-	}
+	// Try loading from .env for local development
+	_ = godotenv.Load()
 
 	mongoURI, exists := os.LookupEnv("MONGO_URI")
 	if !exists {
 		log.Fatal("MONGO_URI environment variable not set")
 	}
 
+	log.Printf("Loaded MONGO_URI: %s", maskURI(mongoURI))
+
 	return &Config{
 		MongoURI: mongoURI,
 	}
+}
+
+// maskURI hides sensitive info for logging
+func maskURI(uri string) string {
+	if len(uri) > 30 {
+		return uri[:10] + "..." + uri[len(uri)-10:]
+	}
+	return uri
 }
