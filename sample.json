@@ -1,0 +1,695 @@
+[
+  {
+    "Exercise": "Air Squats",
+    "Primary Muscles": "Quads, Hamstrings, Glutes",
+    "Secondary Muscles": "Calves, Adductor, Core",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Barbell Hack Squat",
+    "Primary Muscles": "Quads",
+    "Secondary Muscles": "Glutes, Adductors, Lower Back, Trapezius, Forearm Flexors, Calves",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Barbell Lunge",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Reverse Barbell Lunges",
+    "Primary Muscles": "Glutes",
+    "Secondary Muscles": "Quads, Adductors, Hamstrings",
+    "Type": "Compound",
+    "Focus": ""
+  },
+  {
+    "Exercise": "Barbell Walking Lunge",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Lunges",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Dumbbell Lunges",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Dumbbell Walking Lunges",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Jumping Lunges",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Dumbbell Squats",
+    "Primary Muscles": "Quads, Adductors, Glutes, Lower Back",
+    "Secondary Muscles": "Calves",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Squats",
+    "Primary Muscles": "Quads, Anterior Deltoids",
+    "Secondary Muscles": "Calves",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Front Squats",
+    "Primary Muscles": "Quads, Adductors, Glutes, Lower Back",
+    "Secondary Muscles": "Calves",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Globet Squat",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "Lower Back, Calves",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Jump Squat",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "Calves",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Landmine Hack Squat",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Landmine Squat",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "Lower Back, Calves",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Leg Press",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "Hamstrings",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Hack Squat",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Bulgarian Split Squat",
+    "Primary Muscles": "Quads, Adductors, Glutes",
+    "Secondary Muscles": "",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Romanian Deadlift",
+    "Primary Muscles": "Glutes, Lower Back, Hamstrings",
+    "Secondary Muscles": "Adductors, Trapezius, Forarm Flexors",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Stiff-Legged Deadlift",
+    "Primary Muscles": "Glutes, Lower Back, Hamstrings",
+    "Secondary Muscles": "Adductors, Trapezius, Forarm Flexors",
+    "Type": "Compound",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Leg Extension",
+    "Primary Muscles": "Quads",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Seated Leg Curl",
+    "Primary Muscles": "Hamstrings",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Lying Leg Curl",
+    "Primary Muscles": "Hamstrings",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Standing Calf Raise",
+    "Primary Muscles": "Calves",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Leg"
+  },
+  {
+    "Exercise": "Barbell Shrugs",
+    "Primary Muscles": "Trapezius",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Dumbbell Shrugs",
+    "Primary Muscles": "Trapezius",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Straight Arm Lat Pulldowns",
+    "Primary Muscles": "Lats",
+    "Secondary Muscles": "Rear Deltoids, Rotator Cuffs",
+    "Type": "Isolation",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Back Raises",
+    "Primary Muscles": "Glutes, Lower Back",
+    "Secondary Muscles": "Hamstrings",
+    "Type": "Isolation",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Deadlift",
+    "Primary Muscles": "Glutes, Lower Back",
+    "Secondary Muscles": "Quads, Hamstrings, Abductors, Trapezius, Forearm Flexors",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Pull up",
+    "Primary Muscles": "Lats",
+    "Secondary Muscles": "Biceps, Rear Deltoids, Forearm Flexors, Rotator Cuffs",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Barbell Row",
+    "Primary Muscles": "Lats, Trapezius, Rear Deltoids",
+    "Secondary Muscles": "Biceps, Lower Back, Forearm Flexors, Rotator Cuffs",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Hang Power Clean",
+    "Primary Muscles": "Glutes, Lower Back",
+    "Secondary Muscles": "Adductors, Hamstrings, Trapezius, Forearm Flexors",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Inverted Rows",
+    "Primary Muscles": "Lats, Trapezius, Rear Deltoids",
+    "Secondary Muscles": "Biceps, Forearms Flexors, Rotator Cuff",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Inverted Rows with Reverse Grip",
+    "Primary Muscles": "Lats, Trapezius, Rear Deltoids",
+    "Secondary Muscles": "Biceps, Forearms Flexors, Rotator Cuff",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Lat Pulldown with Neutral Grip",
+    "Primary Muscles": "Lats",
+    "Secondary Muscles": "Biceps, Rear Deltoids, Forearm Flexors, Rotator Cuffs",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Lat Pulldown with Supinated Grip",
+    "Primary Muscles": "Lats",
+    "Secondary Muscles": "Biceps, Rear Deltoids, Forearm Flexors, Rotator Cuffs",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Machine Lat Pulldown",
+    "Primary Muscles": "Lats",
+    "Secondary Muscles": "Biceps, Rear Deltoids, Forearm Flexors, Rotator Cuffs",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Neutral Close Grip Lat Pulldown",
+    "Primary Muscles": "Lats",
+    "Secondary Muscles": "Biceps, Rear Deltoid, Forearms Flexors, Rotator Cuffs",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Pendlay Row",
+    "Primary Muscles": "Lats,Rear Deltoid, Trapezius",
+    "Secondary Muscles": "Biceps, Lower Back, Forearm Flexors, Rotator Cuffs",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Power Clean",
+    "Primary Muscles": "Glutes, Lower Back",
+    "Secondary Muscles": "Quads, Adductors, Hamstrings, Trapezius, Forearm Flexors",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Seated Machine Rows",
+    "Primary Muscles": "Lats, Trapezius, Rear Deltoids",
+    "Secondary Muscles": "Biceps, Forearms Flexors, Rotator Cuff",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Snatch",
+    "Primary Muscles": "Glutes, Lower Back, Adductors, Quads",
+    "Secondary Muscles": "Hamstrings, Trapezius, Forearm Flexors, Calves",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "T-Bar Rows",
+    "Primary Muscles": "Lats, Trapezius, Rear Deltoids",
+    "Secondary Muscles": "Biceps, Lower Back, Forearm Flexors, Rotator Cuffs",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Trap Bar High Handles",
+    "Primary Muscles": "Glutes, Lower Back, Quads",
+    "Secondary Muscles": "Adductors, Trapezius, Forarm Flexors",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Chin Up",
+    "Primary Muscles": "Lats",
+    "Secondary Muscles": "Biceps, Rear Deltoid, Forearms Flexors, Rotator Cuffs",
+    "Type": "Compound",
+    "Focus": "Back"
+  },
+  {
+    "Exercise": "Bench Press",
+    "Primary Muscles": "Chest, Front Deltoid",
+    "Secondary Muscles": "Triceps",
+    "Type": "Compound",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Dumbbell Chest Press",
+    "Primary Muscles": "Chest, Front Deltoid",
+    "Secondary Muscles": "Triceps",
+    "Type": "Compound",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Decline Bench Press",
+    "Primary Muscles": "Chest",
+    "Secondary Muscles": "Triceps, Front Deltoid",
+    "Type": "Compound",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Incline Bench Press",
+    "Primary Muscles": "Chest, Front Deltoid",
+    "Secondary Muscles": "Triceps",
+    "Type": "Compound",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Machine Chest Press",
+    "Primary Muscles": "Chest, Front Deltoid",
+    "Secondary Muscles": "Triceps",
+    "Type": "Compound",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Pec Deck",
+    "Primary Muscles": "Chest",
+    "Secondary Muscles": "Front Deltoid",
+    "Type": "Isolation",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Incline Dumbbell Press",
+    "Primary Muscles": "Chest, Front Deltoid",
+    "Secondary Muscles": "Triceps",
+    "Type": "Compound",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Push up",
+    "Primary Muscles": "Chest, Front Deltoid",
+    "Secondary Muscles": "Triceps, Abs",
+    "Type": "Compound",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Decline Push up",
+    "Primary Muscles": "Chest, Front Deltoid",
+    "Secondary Muscles": "Triceps, Abs",
+    "Type": "Compound",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Bar Dips",
+    "Primary Muscles": "Chest, Front Deltoid",
+    "Secondary Muscles": "Triceps",
+    "Type": "Compound",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Dumbbell Chest Fly",
+    "Primary Muscles": "Chest",
+    "Secondary Muscles": "Front Deltoid",
+    "Type": "Isolation",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Cable Chest Fly",
+    "Primary Muscles": "Chest",
+    "Secondary Muscles": "Front Deltoid",
+    "Type": "Isolation",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Machine Chest Fly",
+    "Primary Muscles": "Chest",
+    "Secondary Muscles": "Front Deltoid",
+    "Type": "Isolation",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Dumbbell Pullovers",
+    "Primary Muscles": "Chest",
+    "Secondary Muscles": "Lats",
+    "Type": "Isolation",
+    "Focus": "Chest"
+  },
+  {
+    "Exercise": "Arnold Press",
+    "Primary Muscles": "Front Deltoid",
+    "Secondary Muscles": "Lateral Deltoid, Triceps",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Dumbbell Shoulder Press",
+    "Primary Muscles": "Front Deltoid",
+    "Secondary Muscles": "Lateral Deltoid, Triceps",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Face Pull",
+    "Primary Muscles": "Rear Deltoid, Rotator Cuff",
+    "Secondary Muscles": "Trapezius, Lateral Deltoid",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Front Hold",
+    "Primary Muscles": "Front Deltoid",
+    "Secondary Muscles": "Lateral Deltoid",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Lateral Raise",
+    "Primary Muscles": "Lateral Deltoid",
+    "Secondary Muscles": "Front Deltoid",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Barbell Front Raise",
+    "Primary Muscles": "Front Deltoid",
+    "Secondary Muscles": "Lateral Deltoid",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Dumbbell Front Raise",
+    "Primary Muscles": "Front Deltoid",
+    "Secondary Muscles": "Lateral Deltoid",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Reverse Dumbbell Fly",
+    "Primary Muscles": "Rear Deltoid, Rotator Cuff",
+    "Secondary Muscles": "Trapezius",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Reverse Machine Fly",
+    "Primary Muscles": "Rear Deltoid, Rotator Cuff",
+    "Secondary Muscles": "Trapezius",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Reverse Cable Fly",
+    "Primary Muscles": "Rear Deltoid, Rotator Cuff",
+    "Secondary Muscles": "Trapezius",
+    "Type": "Isolation",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Overhead Press",
+    "Primary Muscles": "Front Deltoid",
+    "Secondary Muscles": "Triceps, Lateral Deltoid",
+    "Type": "Compound",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Behind Neck Press",
+    "Primary Muscles": "Front Deltoid, Lateral Deltoid",
+    "Secondary Muscles": "Trapezius, Triceps",
+    "Type": "Compound",
+    "Focus": ""
+  },
+  {
+    "Exercise": "Seated Dumbbell Press",
+    "Primary Muscles": "Front Deltoid",
+    "Secondary Muscles": "Triceps, Lateral Deltoid",
+    "Type": "Compound",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Upright Row",
+    "Primary Muscles": "Lateral Deltoid",
+    "Secondary Muscles": "Front Deltoid, Trapezius, Biceps",
+    "Type": "Compound",
+    "Focus": "Shoulders"
+  },
+  {
+    "Exercise": "Landmine Press",
+    "Primary Muscles": "Front Deltoid",
+    "Secondary Muscles": "Triceps, Chest",
+    "Type": "",
+    "Focus": ""
+  },
+  {
+    "Exercise": "Push Press",
+    "Primary Muscles": "Front Deltoid",
+    "Secondary Muscles": "Quads, Glutes, Adductors, Lower Back, Trapezius, Triceps, Lateral Deltoid",
+    "Type": "Compound",
+    "Focus": "Shoulder"
+  },
+  {
+    "Exercise": "Barbell Curls",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Dumbbell Curls",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Hammer Curls",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Incline Dumbbell Curl",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Barbell Preacher Curl",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Cable Crossover Bicep Curl",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Cable Curl with Bar",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Cable Curl with Rope",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Concentration Curl",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Ez Curls",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Reverse Barbell Curls",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Reverse Dumbbell Curls",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Zottman Curls",
+    "Primary Muscles": "Biceps",
+    "Secondary Muscles": "Forearm Flexors",
+    "Type": "Isolation",
+    "Focus": "Bicep"
+  },
+  {
+    "Exercise": "Barbell Skull Crushers",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Tricep"
+  },
+  {
+    "Exercise": "Dumbbell Tricep Extension",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Tricep"
+  },
+  {
+    "Exercise": "Tricep Rope Pushdown",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Tricep"
+  },
+  {
+    "Exercise": "Tricep Bodyweight Extension",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Tricep"
+  },
+  {
+    "Exercise": "Dumbbell Lying Tricep Extension",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Tricep"
+  },
+  {
+    "Exercise": "Overhead Cable Tricep Extension",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Tricep"
+  },
+  {
+    "Exercise": "Close Grip Bench Press",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "Chest, Front Deltoid",
+    "Type": "Compound",
+    "Focus": "Tricep"
+  },
+  {
+    "Exercise": "Barbell Standing Tricep Extension",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Tricep"
+  },
+  {
+    "Exercise": "Barbell Incline Tricep Extension",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "",
+    "Type": "Isolation",
+    "Focus": "Tricep"
+  },
+  {
+    "Exercise": "Bench Dips",
+    "Primary Muscles": "Triceps",
+    "Secondary Muscles": "Chest, Front Deltoid",
+    "Type": "Compound",
+    "Focus": "Tricep"
+  }
+]

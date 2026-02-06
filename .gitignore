@@ -1,0 +1,54 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.coverprofile
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+
+# Go workspace file
+go.work
+
+# Module cache
+pkg/
+
+# IDE/editor files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Node
+node_modules/
+
+# Coverage, build artifacts
+coverage.out
+
+# Misc
+nomad-*.tfstate
+
+# Ignore local config
+/.env
