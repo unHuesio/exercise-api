@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	MongoURI string
+	JWTKey   []byte
 }
 
 func Load() *Config {
@@ -16,6 +17,11 @@ func Load() *Config {
 	_ = godotenv.Load()
 
 	mongoURI, exists := os.LookupEnv("MONGO_URI")
+	jwtSecret, jwtExists := os.LookupEnv("JWT_SECRET")
+	if !jwtExists {
+		log.Fatal("JWT_SECRET environment variable not set")
+	}
+	jwtKey := []byte(jwtSecret)
 	if !exists {
 		log.Fatal("MONGO_URI environment variable not set")
 	}
@@ -24,6 +30,7 @@ func Load() *Config {
 
 	return &Config{
 		MongoURI: mongoURI,
+		JWTKey:   jwtKey,
 	}
 }
 

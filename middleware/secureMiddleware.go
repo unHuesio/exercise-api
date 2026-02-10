@@ -21,6 +21,16 @@ func SecureHeadersMiddleware() gin.HandlerFunc {
 		permPolicy := "geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=()," +
 			"magnetometer=(),gyroscope=(),fullscreen=(self),payment=()"
 		c.Header("Permissions-Policy", permPolicy)
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-API-Key")
+		c.Header("Access-Control-Allow-Credentials", "true")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
 		c.Next()
 	}
 }

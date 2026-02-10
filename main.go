@@ -40,43 +40,50 @@ func main() {
 	exerciseHandler := &handlers.ExerciseHandler{DB: client}
 	apiKeyHandler := &handlers.APIKeyHandler{DB: client}
 	permissionHandler := &handlers.PermissionHandler{DB: client, Enforcer: enforcer}
+	authenticationHandler := &handlers.AuthenticationHandler{DB: client}
 
 	// Setup router
 	r := gin.Default()
 
 	// Apply API key middleware to all routes
 	r.Use(middleware.SecureHeadersMiddleware())
-	r.Use(middleware.APIKeyAuthMiddleware(apiKeyHandler))
-	r.Use(middleware.InferObjectAction())
-	//r.Use(middleware.Authorize(enforcer, nil))
 
-	// Routes
+	// Public routes
+	r.POST("/register", authenticationHandler.Register)
+	r.POST("/login", authenticationHandler.Login)
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
 	})
 
-	r.GET("/exercises", exerciseHandler.GetAll)
-	r.GET("/exercises/:id", exerciseHandler.GetByID)
-	r.POST("/exercises", exerciseHandler.Create)
-	r.PUT("/exercises/:id", exerciseHandler.Update)
-	r.DELETE("/exercises/:id", exerciseHandler.Delete)
+	// Routes
+	protected := r.Group("/")
+	protected.Use(middleware.APIKeyAuthMiddleware(apiKeyHandler))
+	protected.Use(middleware.JWTAuthMiddleware())
+	protected.Use(middleware.InferObjectAction())
+	protected.Use(middleware.Authorize(enforcer, nil))
 
-	r.GET("/api-keys", apiKeyHandler.GetAll)
-	r.GET("/api-keys/:account", apiKeyHandler.GetByAccount)
-	r.GET("/api-keys/validate/:api_key", apiKeyHandler.Validate)
-	r.POST("/api-keys", apiKeyHandler.Create)
-	r.PUT("/api-keys/:id/invalidate", apiKeyHandler.Invalidate)
-	r.DELETE("/api-keys/:id", apiKeyHandler.Delete)
+	protected.GET("/exercises", exerciseHandler.GetAll)
+	protected.GET("/exercises/:id", exerciseHandler.GetByID)
+	protected.POST("/exercises", exerciseHandler.Create)
+	protected.PUT("/exercises/:id", exerciseHandler.Update)
+	protected.DELETE("/exercises/:id", exerciseHandler.Delete)
 
-	r.GET("/permissions", permissionHandler.GetPermissions)
-	r.GET("/permissions/role/:subject", permissionHandler.GetPermissionsBySubject)
-	r.POST("/permissions", permissionHandler.CreatePermission)
-	r.DELETE("/permissions", permissionHandler.DeletePermission)
+	protected.GET("/api-keys", apiKeyHandler.GetAll)
+	protected.GET("/api-keys/:account", apiKeyHandler.GetByAccount)
+	protected.GET("/api-keys/validate/:api_key", apiKeyHandler.Validate)
+	protected.POST("/api-keys", apiKeyHandler.Create)
+	protected.PUT("/api-keys/:id/invalidate", apiKeyHandler.Invalidate)
+	protected.DELETE("/api-keys/:id", apiKeyHandler.Delete)
 
-	r.POST("/permissions/groups", permissionHandler.AssignUserToRole)
-	r.DELETE("/permissions/groups", permissionHandler.RemoveUserFromRole)
+	protected.GET("/permissions", permissionHandler.GetPermissions)
+	protected.GET("/permissions/role/:subject", permissionHandler.GetPermissionsBySubject)
+	protected.POST("/permissions", permissionHandler.CreatePermission)
+	protected.DELETE("/permissions", permissionHandler.DeletePermission)
+
+	protected.POST("/permissions/groups", permissionHandler.AssignUserToRole)
+	protected.DELETE("/permissions/groups", permissionHandler.RemoveUserFromRole)
 
 	r.Run() // listen and serve on 0.0.0.0:8080 by default
 }

@@ -10,7 +10,17 @@ import (
 
 func Authorize(enforcer *casbin.Enforcer, getObject func(*gin.Context)) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		user_email, exists := c.Get("user_email")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User email not found in context"})
+			return
+		}
 		user := c.GetString("api_key_user")
+
+		if user_email != user {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User email does not match API key user"})
+			return
+		}
 		object := c.GetString("inferred_object")
 		action := c.GetString("inferred_action")
 
