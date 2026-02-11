@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"time"
 
 	"gym-api/m/config"
 
@@ -30,6 +31,11 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			exp, ok := claims["exp"].(float64)
+			if !ok || int64(exp) < jwt.NewNumericDate(time.Now()).Unix() {
+				c.AbortWithStatusJSON(401, gin.H{"error": "Token expired"})
+				return
+			}
 			c.Set("user_email", claims["email"])
 		} else {
 			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token claims"})

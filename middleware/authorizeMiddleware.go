@@ -16,7 +16,6 @@ func Authorize(enforcer *casbin.Enforcer, getObject func(*gin.Context)) gin.Hand
 			return
 		}
 		user := c.GetString("api_key_user")
-
 		if user_email != user {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User email does not match API key user"})
 			return

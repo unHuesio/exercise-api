@@ -40,7 +40,7 @@ func main() {
 	exerciseHandler := &handlers.ExerciseHandler{DB: client}
 	apiKeyHandler := &handlers.APIKeyHandler{DB: client}
 	permissionHandler := &handlers.PermissionHandler{DB: client, Enforcer: enforcer}
-	authenticationHandler := &handlers.AuthenticationHandler{DB: client}
+	authenticationHandler := &handlers.AuthenticationHandler{DB: client, Enforcer: enforcer}
 
 	// Setup router
 	r := gin.Default()
@@ -82,6 +82,8 @@ func main() {
 	protected.POST("/permissions", permissionHandler.CreatePermission)
 	protected.DELETE("/permissions", permissionHandler.DeletePermission)
 
+	protected.GET("/permissions/groups", permissionHandler.GetRoles)
+	protected.GET("/permissions/groups/:user", permissionHandler.GetRolesByUser)
 	protected.POST("/permissions/groups", permissionHandler.AssignUserToRole)
 	protected.DELETE("/permissions/groups", permissionHandler.RemoveUserFromRole)
 

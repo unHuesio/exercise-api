@@ -125,6 +125,35 @@ func (h *PermissionHandler) AssignUserToRole(c *gin.Context) {
 	c.JSON(http.StatusOK, group)
 }
 
+func (h *PermissionHandler) GetRoles(c *gin.Context) {
+	roles, err := h.Enforcer.GetAllRoles()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	result := make(map[string][]string)
+	for _, role := range roles {
+		users, err := h.Enforcer.GetUsersForRole(role)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		result[role] = users
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *PermissionHandler) GetRolesByUser(c *gin.Context) {
+	user := c.Param("user")
+
+	roles, err := h.Enforcer.GetRolesForUser(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, roles)
+}
+
 func (h *PermissionHandler) RemoveUserFromRole(c *gin.Context) {
 	var group models.GroupingPolicy
 	if err := c.ShouldBindJSON(&group); err != nil {

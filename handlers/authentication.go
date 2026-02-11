@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,7 +18,8 @@ import (
 var cfg = config.Load()
 
 type AuthenticationHandler struct {
-	DB *mongo.Client
+	DB       *mongo.Client
+	Enforcer *casbin.Enforcer
 }
 
 func (h *AuthenticationHandler) Register(c *gin.Context) {
@@ -85,9 +87,17 @@ func (h *AuthenticationHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// get user role from casbin enforcer and include it in the token claims
+	roles, err := h.Enforcer.GetRolesForUser(user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user roles"})
+		return
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID.Hex(),
 		"email":   user.Email,
+		"roles":   roles,
 		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	})
 	tokenString, err := token.SignedString(cfg.JWTKey)
