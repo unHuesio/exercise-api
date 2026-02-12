@@ -51,6 +51,8 @@ func main() {
 	// Public routes
 	r.POST("/register", authenticationHandler.Register)
 	r.POST("/login", authenticationHandler.Login)
+	r.POST("/applications/token", authenticationHandler.GenerateApplicationJWT)
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
@@ -86,6 +88,11 @@ func main() {
 	protected.GET("/permissions/groups/:user", permissionHandler.GetRolesByUser)
 	protected.POST("/permissions/groups", permissionHandler.AssignUserToRole)
 	protected.DELETE("/permissions/groups", permissionHandler.RemoveUserFromRole)
+
+	protected.GET("/applications", authenticationHandler.GetApplications)
+	protected.POST("/applications", authenticationHandler.RegisterApplication)
+	protected.PUT("/applications/:id/status", authenticationHandler.UpdateApplicationStatus)
+	protected.DELETE("/applications/:id", authenticationHandler.DeleteApplication)
 
 	r.Run() // listen and serve on 0.0.0.0:8080 by default
 }
