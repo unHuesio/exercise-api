@@ -18,6 +18,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 FROM gcr.io/distroless/base-debian12
 WORKDIR /
 COPY --from=builder /workspace/server /server
+COPY --from=builder /workspace/config /config
 
 # Cloud Run expects the server to listen on $PORT (default 8080)
 ENV PORT=8080
