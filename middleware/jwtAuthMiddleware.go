@@ -16,6 +16,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
+			fmt.Printf("auth request required")
 			c.AbortWithStatusJSON(401, gin.H{"error": "Authorization header required"})
 			return
 		}
@@ -27,20 +28,22 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return cfg.JWTKey, nil
 		})
 		if err != nil || !token.Valid {
+			fmt.Printf("invalid token")
 			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token"})
 			return
 		}
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 			exp, ok := claims["exp"].(float64)
 			if !ok || int64(exp) < jwt.NewNumericDate(time.Now()).Unix() {
+				fmt.Printf("token expired")
 				c.AbortWithStatusJSON(401, gin.H{"error": "Token expired"})
 				return
 			}
 			c.Set("user_email", claims["email"])
 		} else {
+			fmt.Printf("invalid token claims")
 			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token claims"})
 			return
 		}
-		c.Next()
 	}
 }

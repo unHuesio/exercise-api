@@ -69,11 +69,24 @@ func (h *AuthenticationHandler) RegisterApplication(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// validate that api key exists with email and is valid
+	apiKeyCollection := h.DB.Database("gym-app").Collection("api_keys")
+	var apiKey models.ApiKey
+	err := apiKeyCollection.FindOne(ctx, bson.M{"account": app.Email, "is_valid": true, "api_key": app.ApiKey}).Decode(&apiKey)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email or API key"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
 	app.Status = "pending"
 	app.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
 
 	collection := h.DB.Database("gym-app").Collection("applications")
-	_, err := collection.InsertOne(ctx, app)
+	_, err = collection.InsertOne(ctx, app)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

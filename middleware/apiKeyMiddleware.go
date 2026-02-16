@@ -30,6 +30,5 @@ func APIKeyAuthMiddleware(apiKeyHandler *handlers.APIKeyHandler) gin.HandlerFunc
 			return
 		}
 		c.Set("api_key_user", user)
-		c.Next()
 	}
 }

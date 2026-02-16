@@ -61,8 +61,7 @@ func main() {
 
 	// Routes
 	protected := r.Group("/")
-	protected.Use(middleware.APIKeyAuthMiddleware(apiKeyHandler))
-	protected.Use(middleware.JWTAuthMiddleware())
+	protected.Use(middleware.Auth(middleware.JWTAuthMiddleware(), middleware.APIKeyAuthMiddleware(apiKeyHandler)))
 	protected.Use(middleware.InferObjectAction())
 	protected.Use(middleware.Authorize(enforcer, nil))
 
