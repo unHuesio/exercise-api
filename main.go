@@ -9,9 +9,13 @@ import (
 	"gym-api/m/handlers"
 	"gym-api/m/middleware"
 
+	limit "github.com/aviddiviner/gin-limit"
 	"github.com/casbin/casbin/v2"
 	mongodbadapter "github.com/casbin/mongodb-adapter/v4"
 	"github.com/gin-gonic/gin"
+	limiterlib "github.com/ulule/limiter/v3"
+	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
+	memory "github.com/ulule/limiter/v3/drivers/store/memory"
 )
 
 func main() {
@@ -42,11 +46,23 @@ func main() {
 	permissionHandler := &handlers.PermissionHandler{DB: client, Enforcer: enforcer}
 	authenticationHandler := &handlers.AuthenticationHandler{DB: client, Enforcer: enforcer}
 
+	// Rate limiter setup
+	rate, err := limiterlib.NewRateFromFormatted("1-S")
+	if err != nil {
+		log.Fatal(err)
+	}
+	store := memory.NewStore()
+	rateLimiter := limiterlib.New(store, rate)
+	rateLimiterMiddleware := mgin.NewMiddleware(rateLimiter)
+
 	// Setup router
 	r := gin.Default()
 
 	// Apply API key middleware to all routes
 	r.Use(middleware.SecureHeadersMiddleware())
+	// Apply rate limiting middleware globally
+	r.Use(limit.MaxAllowed(1))
+	r.Use(rateLimiterMiddleware)
 
 	// Public routes
 	r.POST("/register", authenticationHandler.Register)
