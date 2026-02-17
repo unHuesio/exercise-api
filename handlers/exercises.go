@@ -23,7 +23,22 @@ func (h *ExerciseHandler) GetAll(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cursor, err := collection.Find(ctx, bson.M{})
+	// Build filter from query parameters
+	filter := bson.M{}
+	if focus := c.Query("focus"); focus != "" {
+		filter["Focus"] = bson.M{"$regex": focus, "$options": "i"}
+	}
+	if exerciseType := c.Query("type"); exerciseType != "" {
+		filter["Type"] = bson.M{"$regex": exerciseType, "$options": "i"}
+	}
+	if muscle := c.Query("muscle"); muscle != "" {
+		filter["$or"] = []bson.M{
+			{"Primary Muscles": bson.M{"$regex": muscle, "$options": "i"}},
+			{"Secondary Muscles": bson.M{"$regex": muscle, "$options": "i"}},
+		}
+	}
+
+	cursor, err := collection.Find(ctx, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
