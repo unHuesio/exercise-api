@@ -20,31 +20,21 @@ func Authorize(enforcer *casbin.Enforcer, getObject func(*gin.Context)) gin.Hand
 			return
 		}
 		user := c.GetString("api_key_user")
-		if user_email != user && c.GetHeader("X-API-Key") != "" && c.GetHeader("Authorization") != "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User email does not match API key user"})
-			return
-		}
+
 		object := c.GetString("inferred_object")
 		action := c.GetString("inferred_action")
 
-		var inferred_user string
-		if exists && user_email != "" && user_email != nil {
-			inferred_user, _ = user_email.(string)
-		} else {
-			inferred_user = user
-		}
+		apiKeyAllowed, _ := enforcer.Enforce(user, object, action)
+		fmt.Printf("Authorizing API key user '%s' for action '%s' on object '%s'\n", user, action, object)
 
-		fmt.Printf("Authorizing user '%s' for action '%s' on object '%s'\n", inferred_user, action, object)
+		userAllowed, _ := enforcer.Enforce(user_email, object, action)
+		fmt.Printf("Authorizing user '%s' for action '%s' on object '%s'\n", user_email, action, object)
 
-		allowed, err := enforcer.Enforce(inferred_user, object, action)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Authorization error"})
-			return
-		}
-		if !allowed {
+		if !apiKeyAllowed || (!userAllowed && exists) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}
+
 		c.Next()
 	}
 }

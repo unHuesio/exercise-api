@@ -45,6 +45,7 @@ func main() {
 	apiKeyHandler := &handlers.APIKeyHandler{DB: client}
 	permissionHandler := &handlers.PermissionHandler{DB: client, Enforcer: enforcer}
 	authenticationHandler := &handlers.AuthenticationHandler{DB: client, Enforcer: enforcer}
+	routineHandler := &handlers.RoutineHandler{DB: client}
 
 	// Rate limiter setup
 	rate, err := limiterlib.NewRateFromFormatted("1-S")
@@ -86,6 +87,12 @@ func main() {
 	protected.POST("/exercises", exerciseHandler.Create)
 	protected.PUT("/exercises/:id", exerciseHandler.Update)
 	protected.DELETE("/exercises/:id", exerciseHandler.Delete)
+
+	protected.GET("/routines", routineHandler.GetAll)
+	protected.GET("/routines/:id", routineHandler.GetByID)
+	protected.POST("/routines", routineHandler.CreateRoutine)
+	protected.PUT("/routines/:id", routineHandler.UpdateRoutine)
+	protected.DELETE("/routines/:id", routineHandler.DeleteRoutine)
 
 	protected.GET("/api-keys", apiKeyHandler.GetAll)
 	protected.GET("/api-keys/:account", apiKeyHandler.GetByAccount)

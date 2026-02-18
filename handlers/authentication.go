@@ -56,6 +56,12 @@ func (h *AuthenticationHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// Assign default role to user in casbin enforcer
+	_, err = h.Enforcer.AddRoleForUser(user.Email, "member")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign role to user"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }

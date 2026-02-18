@@ -40,6 +40,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 				return
 			}
 			c.Set("user_email", claims["email"])
+			c.Set("user_id", claims["user_id"])
 		} else {
 			fmt.Printf("invalid token claims")
 			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token claims"})
