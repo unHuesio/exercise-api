@@ -19,7 +19,7 @@ func Authorize(enforcer *casbin.Enforcer, getObject func(*gin.Context)) gin.Hand
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User email not found in context"})
 			return
 		}
-		user := c.GetString("api_key_user")
+		user, user_exists := c.Get("api_key_user")
 
 		object := c.GetString("inferred_object")
 		action := c.GetString("inferred_action")
@@ -30,7 +30,7 @@ func Authorize(enforcer *casbin.Enforcer, getObject func(*gin.Context)) gin.Hand
 		userAllowed, _ := enforcer.Enforce(user_email, object, action)
 		fmt.Printf("Authorizing user '%s' for action '%s' on object '%s'\n", user_email, action, object)
 
-		if !apiKeyAllowed || (!userAllowed && exists) {
+		if (!apiKeyAllowed && user_exists) || (!userAllowed && exists) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}
