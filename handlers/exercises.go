@@ -18,7 +18,7 @@ type ExerciseHandler struct {
 }
 
 func (h *ExerciseHandler) GetAll(c *gin.Context) {
-	collection := h.DB.Database("gym-app").Collection("exercises")
+	collection := h.DB.Database("gym-app").Collection("excercises")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -66,7 +66,7 @@ func (h *ExerciseHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	collection := h.DB.Database("gym-app").Collection("exercises")
+	collection := h.DB.Database("gym-app").Collection("excercises")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -98,7 +98,7 @@ func (h *ExerciseHandler) Create(c *gin.Context) {
 		return
 	}
 
-	collection := h.DB.Database("gym-app").Collection("exercises")
+	collection := h.DB.Database("gym-app").Collection("excercises")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -124,7 +124,7 @@ func (h *ExerciseHandler) Update(c *gin.Context) {
 		return
 	}
 
-	collection := h.DB.Database("gym-app").Collection("exercises")
+	collection := h.DB.Database("gym-app").Collection("excercises")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -148,7 +148,7 @@ func (h *ExerciseHandler) Delete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
-	collection := h.DB.Database("gym-app").Collection("exercises")
+	collection := h.DB.Database("gym-app").Collection("excercises")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
