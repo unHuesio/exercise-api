@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"gym-api/m/config"
 	"gym-api/m/models"
 	"net/http"
@@ -9,11 +10,12 @@ import (
 	"time"
 
 	"github.com/casbin/casbin/v2"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func normalizeEmail(email string) string {
@@ -32,88 +34,140 @@ type AuthenticationHandler struct {
 	Enforcer *casbin.Enforcer
 }
 
-func (h *AuthenticationHandler) Register(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+type googleTokenRequest struct {
+	IDToken string `json:"id_token" binding:"required"`
+}
+
+func (h *AuthenticationHandler) verifyGoogleToken(c *gin.Context, rawToken string) (GoogleTokenClaims, error) {
+	cfg := config.Load()
+	if cfg.GoogleClientID == "" {
+		return GoogleTokenClaims{}, errors.New("google client ID is not configured")
 	}
-	user.Email = normalizeEmail(user.Email)
-	if !isValidEmail(user.Email) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
-		return
+	if cfg.GoogleIssuer == "" {
+		return GoogleTokenClaims{}, errors.New("google issuer is not configured")
 	}
 
+	provider, err := oidc.NewProvider(c.Request.Context(), cfg.GoogleIssuer)
+	if err != nil {
+		return GoogleTokenClaims{}, err
+	}
+
+	verifier := provider.Verifier(&oidc.Config{ClientID: cfg.GoogleClientID})
+	idToken, err := verifier.Verify(c.Request.Context(), rawToken)
+	if err != nil {
+		return GoogleTokenClaims{}, err
+	}
+
+	claims := GoogleTokenClaims{}
+	if err := idToken.Claims(&claims); err != nil {
+		return GoogleTokenClaims{}, err
+	}
+	if claims.Subject == "" || claims.Email == "" {
+		return GoogleTokenClaims{}, errors.New("google token missing required claims")
+	}
+	if !claims.EmailVerified {
+		return GoogleTokenClaims{}, errors.New("google email not verified")
+	}
+	if claims.Issuer != cfg.GoogleIssuer {
+		return GoogleTokenClaims{}, errors.New("unexpected google issuer")
+	}
+	if claims.Audience != cfg.GoogleClientID {
+		return GoogleTokenClaims{}, errors.New("unexpected google audience")
+	}
+	if time.Now().Unix() >= claims.Expiry {
+		return GoogleTokenClaims{}, errors.New("google token expired")
+	}
+
+	return claims, nil
+}
+
+func (h *AuthenticationHandler) upsertGoogleUser(c *gin.Context, claims GoogleTokenClaims) (models.User, error) {
 	collection := h.DB.Database("gym-app").Collection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Check if user already exists
-	var existingUser models.User
-	err := collection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&existingUser)
+	email := normalizeEmail(claims.Email)
+	if !isValidEmail(email) {
+		return models.User{}, errors.New("invalid email format from google identity")
+	}
+
+	userDoc := models.User{
+		Email:           email,
+		Provider:        "google",
+		ProviderSubject: claims.Subject,
+	}
+
+	var existing models.User
+	err := collection.FindOne(ctx, bson.M{"provider": "google", "provider_subject": claims.Subject}).Decode(&existing)
 	if err == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
+		if existing.Email != email {
+			existing.Email = email
+			if _, updateErr := collection.UpdateOne(ctx, bson.M{"_id": existing.ID}, bson.M{"$set": bson.M{"email": email}}); updateErr != nil {
+				return models.User{}, updateErr
+			}
+		}
+		return existing, nil
+	}
+	if err != mongo.ErrNoDocuments {
+		return models.User{}, err
+	}
+
+	res, err := collection.InsertOne(ctx, userDoc)
+	if err != nil {
+		return models.User{}, err
+	}
+	userDoc.ID, _ = res.InsertedID.(primitive.ObjectID)
+	if userDoc.ID.IsZero() {
+		return models.User{}, errors.New("failed to read inserted google user id")
+	}
+	return userDoc, nil
+}
+
+func (h *AuthenticationHandler) Register(c *gin.Context) {
+	var req googleTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
-	} else if err != mongo.ErrNoDocuments {
+	}
+	claims, err := h.verifyGoogleToken(c, req.IDToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Google authentication failed: " + err.Error()})
+		return
+	}
+
+	user, err := h.upsertGoogleUser(c, claims)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	// Hash password before storing
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
-		return
-	}
-	user.Password = string(hashedPassword)
-	_, err = collection.InsertOne(ctx, user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	// Assign default role to user in casbin enforcer
+
 	_, err = h.Enforcer.AddRoleForUser(user.Email, "member")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign role to user"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Google user registered successfully"})
 }
 
 func (h *AuthenticationHandler) Login(c *gin.Context) {
-	var credentials models.User
-	if err := c.ShouldBindJSON(&credentials); err != nil {
+	var req googleTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	credentials.Email = normalizeEmail(credentials.Email)
-	if !isValidEmail(credentials.Email) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
-		return
-	}
-
-	collection := h.DB.Database("gym-app").Collection("users")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	var user models.User
-	err := collection.FindOne(ctx, bson.M{"email": credentials.Email}).Decode(&user)
+	claims, err := h.verifyGoogleToken(c, req.IDToken)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Google authentication failed: " + err.Error()})
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credentials.Password))
+	user, err := h.upsertGoogleUser(c, claims)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// get user role from casbin enforcer and include it in the token claims
 	roles, err := h.Enforcer.GetRolesForUser(user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user roles"})

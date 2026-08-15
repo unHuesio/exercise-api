@@ -4,13 +4,13 @@ import (
 	"errors"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Email    string             `bson:"email" json:"email" binding:"required"`
-	Password string             `bson:"password" json:"password" binding:"required"`
+	ID              primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Email           string             `bson:"email" json:"email" binding:"required"`
+	Provider        string             `bson:"provider" json:"provider" binding:"required"`
+	ProviderSubject string             `bson:"provider_subject" json:"provider_subject" binding:"required"`
 }
 
 func (u *User) Validate() error {
@@ -20,21 +20,11 @@ func (u *User) Validate() error {
 	if u.Email == "" {
 		return errors.New("email is required")
 	}
-	if u.Password == "" {
-		return errors.New("password is required")
+	if u.Provider == "" {
+		return errors.New("provider is required")
+	}
+	if u.ProviderSubject == "" {
+		return errors.New("provider subject is required")
 	}
 	return nil
-}
-
-func (u *User) SetPassword(password string) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	u.Password = string(hash)
-	return nil
-}
-
-func (u *User) VerifyPassword(password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 }

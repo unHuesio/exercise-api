@@ -8,12 +8,13 @@ import (
 )
 
 type Config struct {
-	MongoURI string
-	JWTKey   []byte
+	MongoURI       string
+	JWTKey         []byte
+	GoogleClientID string
+	GoogleIssuer   string
 }
 
 func Load() *Config {
-	// Try loading from .env for local development
 	_ = godotenv.Load()
 
 	mongoURI, exists := os.LookupEnv("MONGO_URI")
@@ -26,11 +27,19 @@ func Load() *Config {
 		log.Fatal("MONGO_URI environment variable not set")
 	}
 
+	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+	googleIssuer := os.Getenv("GOOGLE_ISSUER")
+	if googleIssuer == "" {
+		googleIssuer = "https://accounts.google.com"
+	}
+
 	log.Printf("Loaded MONGO_URI: %s", maskURI(mongoURI))
 
 	return &Config{
-		MongoURI: mongoURI,
-		JWTKey:   jwtKey,
+		MongoURI:       mongoURI,
+		JWTKey:         jwtKey,
+		GoogleClientID: googleClientID,
+		GoogleIssuer:   googleIssuer,
 	}
 }
 
