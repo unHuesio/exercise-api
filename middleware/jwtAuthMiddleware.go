@@ -12,10 +12,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var cfg = config.Load()
-
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		cfg := config.Load()
 		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})

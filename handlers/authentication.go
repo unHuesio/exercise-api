@@ -16,8 +16,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var cfg = config.Load()
-
 func normalizeEmail(email string) string {
 	return strings.TrimSpace(strings.ToLower(email))
 }
@@ -122,6 +120,7 @@ func (h *AuthenticationHandler) Login(c *gin.Context) {
 		return
 	}
 
+	cfg := config.Load()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID.Hex(),
 		"email":   user.Email,
