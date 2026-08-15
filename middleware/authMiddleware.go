@@ -6,29 +6,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Auth(jwtMiddleware gin.HandlerFunc, apiKeyMiddleware gin.HandlerFunc) gin.HandlerFunc {
+func Auth(jwtMiddleware gin.HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		apiKeyHeader := c.GetHeader("x-api-key")
-
-		if authHeader != "" {
-			jwtMiddleware(c)
-			if c.IsAborted() {
-				return
-			}
-			c.Next()
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			return
 		}
 
-		if apiKeyHeader != "" {
-			apiKeyMiddleware(c)
-			if c.IsAborted() {
-				return
-			}
-			c.Next()
+		jwtMiddleware(c)
+		if c.IsAborted() {
 			return
 		}
 
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header or API key required"})
+		c.Next()
 	}
 }

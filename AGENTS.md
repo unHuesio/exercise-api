@@ -4,7 +4,7 @@ This repository is a Go REST API for a gym/exercise application. It is built wit
 
 ## Project purpose
 
-The service exposes CRUD endpoints for exercises, routines, API keys, applications, permissions, and user authentication. It authenticates requests either with a JWT bearer token or an API key and authorizes actions through Casbin policies.
+The service exposes CRUD endpoints for exercises, routines, permissions, and user authentication. It authenticates user-facing clients with JWT bearer tokens and authorizes actions through Casbin RBAC policies.
 
 ## High-level architecture
 
@@ -12,7 +12,7 @@ The service exposes CRUD endpoints for exercises, routines, API keys, applicatio
 - config/config.go: environment loading for MongoDB and JWT secret.
 - db/db.go: MongoDB connection lifecycle.
 - handlers/: HTTP handlers for each domain.
-- middleware/: Gin middleware for auth, API-key validation, JWT validation, RBAC authorization, and security headers.
+- middleware/: Gin middleware for JWT validation, RBAC authorization, and security headers.
 - models/: persistence DTOs for database documents.
 - domain/: domain types and repository interfaces.
 - infrastructure/: concrete implementations, especially Mongo-backed persistence.
@@ -35,7 +35,7 @@ The service exposes CRUD endpoints for exercises, routines, API keys, applicatio
 3. A Casbin enforcer is created using `config/rbac_model.conf` and the Mongo adapter.
 4. Handlers are instantiated with the Mongo client and the enforcer.
 5. Gin router is configured with global security and rate limiting middleware.
-6. Public routes are mounted for registration/login and app token generation.
+6. Public routes are mounted for registration/login and health checks.
 7. Protected routes are mounted under a single group with:
    - `Auth(...)`
    - `InferObjectAction()`
@@ -43,19 +43,18 @@ The service exposes CRUD endpoints for exercises, routines, API keys, applicatio
 
 ## Auth and authorization model
 
-- Public endpoints: `/register`, `/login`, `/applications/token`, `/ping`
-- Protected routes: all other endpoints, guarded by JWT or API-key middleware.
-- `middleware.Auth` accepts either Authorization header JWT or `x-api-key`.
-- JWT middleware populates request context with user info.
-- API key middleware validates API keys against MongoDB collections.
+- Public endpoints: `/register`, `/login`, `/ping`
+- Protected routes: all other endpoints, guarded by JWT middleware.
+- `middleware.Auth` accepts a bearer JWT in the Authorization header.
+- JWT middleware populates request context with user info such as email and user ID.
 - `middleware.InferObjectAction` sets the inferred `inferred_object` and `inferred_action` context values used by Casbin.
 - `middleware.Authorize` enforces `sub, obj, act` permissions using the RBAC model.
 
 ## MongoDB conventions
 
 - The app uses the Mongo database named `gym-app`.
-- Collections are named in lower-case snake case in many places, e.g. `users`, `applications`, `api_keys`, `exercises`, `routines`.
-- Entity structs use Mongo BSON tags and JSON tags. Example: `_id`, `email`, `api_key`, etc.
+- Collections are named in lower-case snake case in many places, e.g. `users`, `exercises`, `routines`, and permission-related collections.
+- Entity structs use Mongo BSON tags and JSON tags. Example: `_id`, `email`, etc.
 - Most handlers perform direct database operations inside their handler methods rather than through a repository layer.
 
 ## Important project conventions

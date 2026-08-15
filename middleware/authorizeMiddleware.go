@@ -22,9 +22,9 @@ func Authorize(enforcer *casbin.Enforcer, getObject func(*gin.Context)) gin.Hand
 				subjects = append(subjects, email)
 			}
 		}
-		if apiKeyUser, exists := c.Get("api_key_user"); exists {
-			if user, ok := apiKeyUser.(string); ok && user != "" {
-				subjects = append(subjects, user)
+		if userID, exists := c.Get("user_id"); exists {
+			if id, ok := userID.(string); ok && id != "" {
+				subjects = append(subjects, id)
 			}
 		}
 		if len(subjects) == 0 {
