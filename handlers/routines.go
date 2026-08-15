@@ -28,7 +28,11 @@ func (h *RoutineHandler) GetAll(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	defer cursor.Close(ctx)
+	defer func() {
+		if err := cursor.Close(ctx); err != nil {
+			_ = c.Error(err)
+		}
+	}()
 
 	var routines []models.Routine
 	if err := cursor.All(ctx, &routines); err != nil {

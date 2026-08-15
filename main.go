@@ -102,5 +102,7 @@ func main() {
 	protected.POST("/permissions/groups", permissionHandler.AssignUserToRole)
 	protected.DELETE("/permissions/groups", permissionHandler.RemoveUserFromRole)
 
-	r.Run() // listen and serve on 0.0.0.0:8080 by default
+	if err := r.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

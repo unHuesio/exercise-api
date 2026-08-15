@@ -43,7 +43,11 @@ func (h *ExerciseHandler) GetAll(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	defer cursor.Close(ctx)
+	defer func() {
+		if err := cursor.Close(ctx); err != nil {
+			_ = c.Error(err)
+		}
+	}()
 
 	var exercises []models.Exercise
 	if err := cursor.All(ctx, &exercises); err != nil {
