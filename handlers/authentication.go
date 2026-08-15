@@ -38,6 +38,55 @@ type googleTokenRequest struct {
 	IDToken string `json:"id_token" binding:"required"`
 }
 
+func buildAuthPayload(tokenString string, roles []string) gin.H {
+	if len(roles) == 0 {
+		roles = []string{"member"}
+	}
+
+	roleList := make([]string, len(roles))
+	copy(roleList, roles)
+
+	isAdmin := false
+	for _, role := range roleList {
+		if strings.EqualFold(role, "admin") {
+			isAdmin = true
+			break
+		}
+	}
+
+	return gin.H{
+		"token":   tokenString,
+		"roles":   roleList,
+		"isAdmin": isAdmin,
+	}
+}
+
+func buildUserProfileResponse(user models.User, roles []string) gin.H {
+	if len(roles) == 0 {
+		roles = []string{"member"}
+	}
+
+	roleList := make([]string, len(roles))
+	copy(roleList, roles)
+
+	isAdmin := false
+	for _, role := range roleList {
+		if strings.EqualFold(role, "admin") {
+			isAdmin = true
+			break
+		}
+	}
+
+	profile := gin.H{
+		"id":       user.ID.Hex(),
+		"email":    user.Email,
+		"provider": user.Provider,
+		"roles":    roleList,
+		"isAdmin":  isAdmin,
+	}
+	return profile
+}
+
 func (h *AuthenticationHandler) verifyGoogleToken(c *gin.Context, rawToken string) (GoogleTokenClaims, error) {
 	cfg := config.Load()
 	if cfg.GoogleClientID == "" {
@@ -123,6 +172,43 @@ func (h *AuthenticationHandler) upsertGoogleUser(c *gin.Context, claims GoogleTo
 	return userDoc, nil
 }
 
+func (h *AuthenticationHandler) Me(c *gin.Context) {
+	emailValue, exists := c.Get("user_email")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User identity not found in request context"})
+		return
+	}
+
+	email, ok := emailValue.(string)
+	if !ok || strings.TrimSpace(email) == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User email not found in request context"})
+		return
+	}
+
+	collection := h.DB.Database("gym-app").Collection("users")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	var user models.User
+	err := collection.FindOne(ctx, bson.M{"email": normalizeEmail(email)}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	roles, err := h.Enforcer.GetRolesForUser(user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user roles"})
+		return
+	}
+
+	c.JSON(http.StatusOK, buildUserProfileResponse(user, roles))
+}
+
 func (h *AuthenticationHandler) Register(c *gin.Context) {
 	var req googleTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -147,7 +233,21 @@ func (h *AuthenticationHandler) Register(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Google user registered successfully"})
+	roles, err := h.Enforcer.GetRolesForUser(user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user roles"})
+		return
+	}
+
+	payload := gin.H{"message": "Google user registered successfully"}
+	for key, value := range buildAuthPayload("", roles) {
+		if key == "token" {
+			continue
+		}
+		payload[key] = value
+	}
+
+	c.JSON(http.StatusOK, payload)
 }
 
 func (h *AuthenticationHandler) Login(c *gin.Context) {
@@ -187,5 +287,5 @@ func (h *AuthenticationHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": tokenString})
+	c.JSON(http.StatusOK, buildAuthPayload(tokenString, roles))
 }

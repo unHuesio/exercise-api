@@ -68,6 +68,10 @@ func main() {
 	r.POST("/register", authenticationHandler.Register)
 	r.POST("/login", authenticationHandler.Login)
 
+	meRouter := r.Group("/")
+	meRouter.Use(middleware.Auth(middleware.JWTAuthMiddleware()))
+	meRouter.GET("/me", authenticationHandler.Me)
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong 2",
