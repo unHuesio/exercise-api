@@ -33,8 +33,8 @@ func (h *ExerciseHandler) GetAll(c *gin.Context) {
 	}
 	if muscle := c.Query("muscle"); muscle != "" {
 		filter["$or"] = []bson.M{
-			{"Primary Muscles": bson.M{"$regex": muscle, "$options": "i"}},
-			{"Secondary Muscles": bson.M{"$regex": muscle, "$options": "i"}},
+			{"PrimaryMuscles": bson.M{"$regex": muscle, "$options": "i"}},
+			{"SecondaryMuscles": bson.M{"$regex": muscle, "$options": "i"}},
 		}
 	}
 
