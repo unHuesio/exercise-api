@@ -3,8 +3,8 @@ package user
 import (
 	"errors"
 
-	"golang.org/x/crypto/bcrypt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {

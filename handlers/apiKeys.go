@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"gym-api/m/models"
@@ -29,6 +30,11 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 	var apiKey models.ApiKey
 	if err := c.ShouldBindJSON(&apiKey); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	apiKey.Account = strings.TrimSpace(apiKey.Account)
+	if apiKey.Account == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Account is required"})
 		return
 	}
 
@@ -94,6 +100,11 @@ func (h *APIKeyHandler) Validate(c *gin.Context) {
 }
 
 func (h *APIKeyHandler) ValidateApiKey(apiKey string) (bool, error) {
+	apiKey = strings.TrimSpace(apiKey)
+	if apiKey == "" {
+		return false, nil
+	}
+
 	collection := h.DB.Database("gym-app").Collection("api_keys")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -111,6 +122,11 @@ func (h *APIKeyHandler) ValidateApiKey(apiKey string) (bool, error) {
 }
 
 func (h *APIKeyHandler) GetApiKeyUser(apiKey string) (string, error) {
+	apiKey = strings.TrimSpace(apiKey)
+	if apiKey == "" {
+		return "", nil
+	}
+
 	collection := h.DB.Database("gym-app").Collection("api_keys")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

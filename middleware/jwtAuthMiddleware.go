@@ -1,7 +1,9 @@
 package middleware
 
 import (
-	"fmt"
+	"errors"
+	"net/http"
+	"strings"
 	"time"
 
 	"gym-api/m/config"
@@ -14,37 +16,54 @@ var cfg = config.Load()
 
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
+		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
 		if authHeader == "" {
-			fmt.Printf("auth request required")
-			c.AbortWithStatusJSON(401, gin.H{"error": "Authorization header required"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			return
 		}
-		tokenString := authHeader[len("Bearer "):]
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Bearer token required"})
+			return
+		}
+
+		tokenString := strings.TrimSpace(authHeader[len("Bearer "):])
+		if tokenString == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token missing"})
+			return
+		}
+
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+				return nil, errors.New("unexpected signing method")
 			}
 			return cfg.JWTKey, nil
 		})
 		if err != nil || !token.Valid {
-			fmt.Printf("invalid token")
-			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			exp, ok := claims["exp"].(float64)
-			if !ok || int64(exp) < jwt.NewNumericDate(time.Now()).Unix() {
-				fmt.Printf("token expired")
-				c.AbortWithStatusJSON(401, gin.H{"error": "Token expired"})
-				return
-			}
-			c.Set("user_email", claims["email"])
-			c.Set("user_id", claims["user_id"])
-		} else {
-			fmt.Printf("invalid token claims")
-			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token claims"})
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok || !token.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 			return
+		}
+
+		exp, ok := claims["exp"].(float64)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token missing expiration"})
+			return
+		}
+		if int64(exp) < time.Now().Unix() {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
+			return
+		}
+
+		if email, ok := claims["email"].(string); ok && email != "" {
+			c.Set("user_email", email)
+		}
+		if userID, ok := claims["user_id"].(string); ok && userID != "" {
+			c.Set("user_id", userID)
 		}
 	}
 }

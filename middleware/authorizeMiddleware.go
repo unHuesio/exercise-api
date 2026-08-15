@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/casbin/casbin/v2"
@@ -10,31 +9,37 @@ import (
 
 func Authorize(enforcer *casbin.Enforcer, getObject func(*gin.Context)) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// print context keys and values for dbeugging
-		for k, v := range c.Keys {
-			fmt.Printf("Context key: %s, value: %v\n", k, v)
-		}
-		user_email, exists := c.Get("user_email")
-		if !exists && c.GetHeader("Authorization") != "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User email not found in context"})
-			return
-		}
-		user, user_exists := c.Get("api_key_user")
-
 		object := c.GetString("inferred_object")
 		action := c.GetString("inferred_action")
-
-		apiKeyAllowed, _ := enforcer.Enforce(user, object, action)
-		fmt.Printf("Authorizing API key user '%s' for action '%s' on object '%s'\n", user, action, object)
-
-		userAllowed, _ := enforcer.Enforce(user_email, object, action)
-		fmt.Printf("Authorizing user '%s' for action '%s' on object '%s'\n", user_email, action, object)
-
-		if (!apiKeyAllowed && user_exists) || (!userAllowed && exists) {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+		if object == "" || action == "" {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Authorization context missing"})
 			return
 		}
 
-		c.Next()
+		subjects := make([]string, 0, 2)
+		if userEmail, exists := c.Get("user_email"); exists {
+			if email, ok := userEmail.(string); ok && email != "" {
+				subjects = append(subjects, email)
+			}
+		}
+		if apiKeyUser, exists := c.Get("api_key_user"); exists {
+			if user, ok := apiKeyUser.(string); ok && user != "" {
+				subjects = append(subjects, user)
+			}
+		}
+		if len(subjects) == 0 {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User identity not found in request context"})
+			return
+		}
+
+		for _, subject := range subjects {
+			allowed, err := enforcer.Enforce(subject, object, action)
+			if err == nil && allowed {
+				c.Next()
+				return
+			}
+		}
+
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 	}
 }

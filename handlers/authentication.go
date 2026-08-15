@@ -5,6 +5,7 @@ import (
 	"gym-api/m/config"
 	"gym-api/m/models"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/casbin/casbin/v2"
@@ -18,6 +19,17 @@ import (
 
 var cfg = config.Load()
 
+func normalizeEmail(email string) string {
+	return strings.TrimSpace(strings.ToLower(email))
+}
+
+func isValidEmail(email string) bool {
+	if email == "" {
+		return false
+	}
+	return strings.Contains(email, "@") && strings.Count(email, "@") == 1
+}
+
 type AuthenticationHandler struct {
 	DB       *mongo.Client
 	Enforcer *casbin.Enforcer
@@ -27,6 +39,11 @@ func (h *AuthenticationHandler) Register(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	user.Email = normalizeEmail(user.Email)
+	if !isValidEmail(user.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
 		return
 	}
 
@@ -72,6 +89,11 @@ func (h *AuthenticationHandler) RegisterApplication(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	app.Email = normalizeEmail(app.Email)
+	if !isValidEmail(app.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -104,6 +126,11 @@ func (h *AuthenticationHandler) Login(c *gin.Context) {
 	var credentials models.User
 	if err := c.ShouldBindJSON(&credentials); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	credentials.Email = normalizeEmail(credentials.Email)
+	if !isValidEmail(credentials.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
 		return
 	}
 
@@ -154,6 +181,11 @@ func (h *AuthenticationHandler) GenerateApplicationJWT(c *gin.Context) {
 	var app models.Application
 	if err := c.ShouldBindJSON(&app); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	app.Email = normalizeEmail(app.Email)
+	if !isValidEmail(app.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
 		return
 	}
 
