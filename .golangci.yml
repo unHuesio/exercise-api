@@ -18,5 +18,3 @@ formatters:
     - gofmt
     - goimports
 
-issues:
-  exclude-use-default: false
