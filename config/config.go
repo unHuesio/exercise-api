@@ -8,11 +8,11 @@ import (
 )
 
 type Config struct {
-	MongoURI       string
-	JWTKey         []byte
-	GoogleClientID string
-	GoogleIssuer   string
-	ExercisesFile  string
+	MongoURI        string
+	JWTKey          []byte
+	GoogleClientID  string
+	GoogleIssuer    string
+	ExercisesFile   string
 	ExercisesBucket string
 	ExercisesObject string
 }

@@ -54,32 +54,40 @@ func main() {
 	routineHandler := &handlers.RoutineHandler{DB: client}
 
 	// Rate limiter setup
-	rate, err := limiterlib.NewRateFromFormatted("1-S")
+	authRate, err := limiterlib.NewRateFromFormatted("10-M")
+	if err != nil {
+		log.Fatal(err)
+	}
+	generalRate, err := limiterlib.NewRateFromFormatted("60-M")
 	if err != nil {
 		log.Fatal(err)
 	}
 	store := memory.NewStore()
-	rateLimiter := limiterlib.New(store, rate)
-	rateLimiterMiddleware := mgin.NewMiddleware(rateLimiter)
+	authLimiter := limiterlib.New(store, authRate)
+	generalLimiter := limiterlib.New(store, generalRate)
+	authLimiterMiddleware := mgin.NewMiddleware(authLimiter)
+	generalLimiterMiddleware := mgin.NewMiddleware(generalLimiter)
 
 	// Setup router
 	r := gin.Default()
 
 	// Apply API key middleware to all routes
 	r.Use(middleware.SecureHeadersMiddleware())
-	// Apply rate limiting middleware globally
-	r.Use(limit.MaxAllowed(1))
-	r.Use(rateLimiterMiddleware)
+	r.Use(limit.MaxAllowed(200))
+
+	// Public auth routes: keep stricter than general API read traffic
+	r.POST("/register", authLimiterMiddleware, authenticationHandler.Register)
+	r.POST("/login", authLimiterMiddleware, authenticationHandler.Login)
+
+	r.Use(generalLimiterMiddleware)
 
 	// Public routes
-	r.POST("/register", authenticationHandler.Register)
-	r.POST("/login", authenticationHandler.Login)
 	r.GET("/health/storage", func(c *gin.Context) {
 		if err := exerciseStore.Health(context.Background()); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"status": "unhealthy",
+				"status":  "unhealthy",
 				"backend": exerciseStore.BackendName(),
-				"error":  err.Error(),
+				"error":   err.Error(),
 			})
 			return
 		}
@@ -95,7 +103,7 @@ func main() {
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "pong 2",
+			"message": "pong",
 		})
 	})
 
