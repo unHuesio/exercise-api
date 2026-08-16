@@ -13,6 +13,10 @@ import (
 	"time"
 
 	"gym-api/m/models"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var ErrNotFound = errors.New("exercise not found")
@@ -87,6 +91,108 @@ func NewExerciseStoreFromConfig(filePath, bucket, object string) (ExerciseStore,
 		return NewGoogleCloudExerciseStore(bucket, object)
 	}
 	return NewFileExerciseStore(filePath)
+}
+
+func NewMongoExerciseStore(client *mongo.Client, databaseName string) (*MongoExerciseStore, error) {
+	if client == nil {
+		return nil, errors.New("mongo client is required")
+	}
+	if strings.TrimSpace(databaseName) == "" {
+		databaseName = "gym-app"
+	}
+	return &MongoExerciseStore{
+		collection: client.Database(databaseName).Collection("exercises"),
+	}, nil
+}
+
+type MongoExerciseStore struct {
+	collection *mongo.Collection
+}
+
+func (s *MongoExerciseStore) List(ctx context.Context, filters map[string]string) ([]models.Exercise, error) {
+	filter := bson.M{}
+
+	if focus := strings.TrimSpace(filters["focus"]); focus != "" {
+		filter["Focus"] = bson.M{"$regex": primitive.Regex{Pattern: focus, Options: "i"}}
+	}
+	if exerciseType := strings.TrimSpace(filters["type"]); exerciseType != "" {
+		filter["Type"] = bson.M{"$regex": primitive.Regex{Pattern: exerciseType, Options: "i"}}
+	}
+	if muscle := strings.TrimSpace(filters["muscle"]); muscle != "" {
+		filter["$or"] = []bson.M{
+			{"PrimaryMuscles": bson.M{"$regex": primitive.Regex{Pattern: muscle, Options: "i"}}},
+			{"SecondaryMuscles": bson.M{"$regex": primitive.Regex{Pattern: muscle, Options: "i"}}},
+		}
+	}
+
+	cursor, err := s.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = cursor.Close(ctx)
+	}()
+
+	var exercises []models.Exercise
+	if err := cursor.All(ctx, &exercises); err != nil {
+		return nil, err
+	}
+	return exercises, nil
+}
+
+func (s *MongoExerciseStore) GetByID(ctx context.Context, id string) (models.Exercise, error) {
+	var exercise models.Exercise
+	if err := s.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&exercise); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return exercise, ErrNotFound
+		}
+		return exercise, err
+	}
+	return exercise, nil
+}
+
+func (s *MongoExerciseStore) Create(ctx context.Context, exercise models.Exercise) (string, error) {
+	if strings.TrimSpace(exercise.Exercise) == "" {
+		return "", errors.New("exercise name is required")
+	}
+	if exercise.ID == "" {
+		exercise.ID = primitive.NewObjectID().Hex()
+	}
+	if _, err := s.collection.InsertOne(ctx, exercise); err != nil {
+		return "", err
+	}
+	return exercise.ID, nil
+}
+
+func (s *MongoExerciseStore) Update(ctx context.Context, id string, exercise models.Exercise) error {
+	exercise.ID = id
+	result, err := s.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": exercise})
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *MongoExerciseStore) Delete(ctx context.Context, id string) error {
+	result, err := s.collection.DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *MongoExerciseStore) Health(ctx context.Context) error {
+	return s.collection.Database().Client().Ping(ctx, nil)
+}
+
+func (s *MongoExerciseStore) BackendName() string {
+	return "mongodb"
 }
 
 func (s *FileExerciseStore) readAll() ([]models.Exercise, error) {

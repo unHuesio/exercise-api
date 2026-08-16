@@ -42,7 +42,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	exerciseStore, err := storage.NewExerciseStoreFromConfig(cfg.ExercisesFile, cfg.ExercisesBucket, cfg.ExercisesObject)
+	exerciseStore, err := storage.NewMongoExerciseStore(client, "gym-app")
 	if err != nil {
 		log.Fatal(err)
 	}
