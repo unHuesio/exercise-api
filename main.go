@@ -124,6 +124,7 @@ func main() {
 	protected.POST("/routines", routineHandler.CreateRoutine)
 	protected.PUT("/routines/:id", routineHandler.UpdateRoutine)
 	protected.DELETE("/routines/:id", routineHandler.DeleteRoutine)
+	protected.POST("/recommendations/routine", routineHandler.Recommend)
 
 	protected.GET("/permissions", permissionHandler.GetPermissions)
 	protected.GET("/permissions/role/:subject", permissionHandler.GetPermissionsBySubject)
