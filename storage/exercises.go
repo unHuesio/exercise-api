@@ -100,13 +100,43 @@ func NewMongoExerciseStore(client *mongo.Client, databaseName string) (*MongoExe
 	if strings.TrimSpace(databaseName) == "" {
 		databaseName = "gym-app"
 	}
+	db := client.Database(databaseName)
 	return &MongoExerciseStore{
-		collection: client.Database(databaseName).Collection("excercises"),
+		collection:       db.Collection("exercises"),
+		legacyCollection: db.Collection("excercises"),
 	}, nil
 }
 
 type MongoExerciseStore struct {
-	collection *mongo.Collection
+	collection       *mongo.Collection
+	legacyCollection *mongo.Collection
+}
+
+func exerciseIDFilter(id string) bson.M {
+	if objectID, err := primitive.ObjectIDFromHex(id); err == nil {
+		return bson.M{"_id": objectID}
+	}
+	return bson.M{"_id": id}
+}
+
+func listCollection(ctx context.Context, collection *mongo.Collection, filter bson.M) ([]models.Exercise, error) {
+	if collection == nil {
+		return nil, nil
+	}
+
+	cursor, err := collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = cursor.Close(ctx)
+	}()
+
+	var exercises []models.Exercise
+	if err := cursor.All(ctx, &exercises); err != nil {
+		return nil, err
+	}
+	return exercises, nil
 }
 
 func (s *MongoExerciseStore) List(ctx context.Context, filters map[string]string) ([]models.Exercise, error) {
@@ -122,33 +152,56 @@ func (s *MongoExerciseStore) List(ctx context.Context, filters map[string]string
 		filter["$or"] = []bson.M{
 			{"PrimaryMuscles": bson.M{"$regex": primitive.Regex{Pattern: muscle, Options: "i"}}},
 			{"SecondaryMuscles": bson.M{"$regex": primitive.Regex{Pattern: muscle, Options: "i"}}},
+			{"Primary Muscles": bson.M{"$regex": primitive.Regex{Pattern: muscle, Options: "i"}}},
+			{"Secondary Muscles": bson.M{"$regex": primitive.Regex{Pattern: muscle, Options: "i"}}},
 		}
 	}
 
-	cursor, err := s.collection.Find(ctx, filter)
+	current, err := listCollection(ctx, s.collection, filter)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = cursor.Close(ctx)
-	}()
-
-	var exercises []models.Exercise
-	if err := cursor.All(ctx, &exercises); err != nil {
+	legacy, err := listCollection(ctx, s.legacyCollection, filter)
+	if err != nil {
 		return nil, err
 	}
-	return exercises, nil
+
+	seen := make(map[string]struct{}, len(current)+len(legacy))
+	merged := make([]models.Exercise, 0, len(current)+len(legacy))
+	for _, exercises := range [][]models.Exercise{current, legacy} {
+		for _, exercise := range exercises {
+			key := exercise.ID
+			if key == "" {
+				key = exercise.Exercise
+			}
+			if _, exists := seen[key]; exists {
+				continue
+			}
+			seen[key] = struct{}{}
+			merged = append(merged, exercise)
+		}
+	}
+	return merged, nil
 }
 
 func (s *MongoExerciseStore) GetByID(ctx context.Context, id string) (models.Exercise, error) {
-	var exercise models.Exercise
-	if err := s.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&exercise); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return exercise, ErrNotFound
+	filter := exerciseIDFilter(id)
+
+	for _, collection := range []*mongo.Collection{s.collection, s.legacyCollection} {
+		if collection == nil {
+			continue
 		}
-		return exercise, err
+		var exercise models.Exercise
+		if err := collection.FindOne(ctx, filter).Decode(&exercise); err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				continue
+			}
+			return exercise, err
+		}
+		return exercise, nil
 	}
-	return exercise, nil
+
+	return models.Exercise{}, ErrNotFound
 }
 
 func (s *MongoExerciseStore) Create(ctx context.Context, exercise models.Exercise) (string, error) {
