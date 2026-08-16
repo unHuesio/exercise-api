@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -8,6 +9,7 @@ import (
 	"gym-api/m/db"
 	"gym-api/m/handlers"
 	"gym-api/m/middleware"
+	"gym-api/m/storage"
 
 	limit "github.com/aviddiviner/gin-limit"
 	"github.com/casbin/casbin/v2"
@@ -40,8 +42,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	exerciseStore, err := storage.NewExerciseStoreFromConfig(cfg.ExercisesFile, cfg.ExercisesBucket, cfg.ExercisesObject)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Initialize handlers
-	exerciseHandler := &handlers.ExerciseHandler{DB: client}
+	exerciseHandler := &handlers.ExerciseHandler{Store: exerciseStore}
 	permissionHandler := &handlers.PermissionHandler{DB: client, Enforcer: enforcer}
 	authenticationHandler := &handlers.AuthenticationHandler{DB: client, Enforcer: enforcer}
 	routineHandler := &handlers.RoutineHandler{DB: client}
@@ -67,6 +74,20 @@ func main() {
 	// Public routes
 	r.POST("/register", authenticationHandler.Register)
 	r.POST("/login", authenticationHandler.Login)
+	r.GET("/health/storage", func(c *gin.Context) {
+		if err := exerciseStore.Health(context.Background()); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status": "unhealthy",
+				"backend": exerciseStore.BackendName(),
+				"error":  err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "healthy",
+			"backend": exerciseStore.BackendName(),
+		})
+	})
 
 	meRouter := r.Group("/")
 	meRouter.Use(middleware.Auth(middleware.JWTAuthMiddleware()))

@@ -12,6 +12,9 @@ type Config struct {
 	JWTKey         []byte
 	GoogleClientID string
 	GoogleIssuer   string
+	ExercisesFile  string
+	ExercisesBucket string
+	ExercisesObject string
 }
 
 func Load() *Config {
@@ -33,13 +36,27 @@ func Load() *Config {
 		googleIssuer = "https://accounts.google.com"
 	}
 
+	exercisesFile := os.Getenv("EXERCISES_FILE")
+	if exercisesFile == "" {
+		exercisesFile = "excercises.json"
+	}
+
+	exercisesBucket := os.Getenv("EXERCISES_BUCKET")
+	exercisesObject := os.Getenv("EXERCISES_OBJECT")
+	if exercisesObject == "" {
+		exercisesObject = "excercises.json"
+	}
+
 	log.Printf("Loaded MONGO_URI: %s", maskURI(mongoURI))
 
 	return &Config{
-		MongoURI:       mongoURI,
-		JWTKey:         jwtKey,
-		GoogleClientID: googleClientID,
-		GoogleIssuer:   googleIssuer,
+		MongoURI:        mongoURI,
+		JWTKey:          jwtKey,
+		GoogleClientID:  googleClientID,
+		GoogleIssuer:    googleIssuer,
+		ExercisesFile:   exercisesFile,
+		ExercisesBucket: exercisesBucket,
+		ExercisesObject: exercisesObject,
 	}
 }
 
