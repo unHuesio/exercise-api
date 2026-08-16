@@ -101,7 +101,7 @@ func NewMongoExerciseStore(client *mongo.Client, databaseName string) (*MongoExe
 		databaseName = "gym-app"
 	}
 	return &MongoExerciseStore{
-		collection: client.Database(databaseName).Collection("exercises"),
+		collection: client.Database(databaseName).Collection("excercises"),
 	}, nil
 }
 
