@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 
 	"gym-api/m/models"
 
@@ -14,9 +15,11 @@ import (
 )
 
 type GoogleCloudExerciseStore struct {
-	bucket string
-	object string
-	client *storage.Client
+	bucket     string
+	object     string
+	client     *storage.Client
+	generation int64
+	mu         sync.Mutex
 }
 
 func NewGoogleCloudExerciseStore(bucket, object string) (*GoogleCloudExerciseStore, error) {
@@ -58,6 +61,9 @@ func (s *GoogleCloudExerciseStore) GetByID(ctx context.Context, id string) (mode
 }
 
 func (s *GoogleCloudExerciseStore) Create(ctx context.Context, exercise models.Exercise) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	items, err := s.readAll(ctx)
 	if err != nil {
 		return "", err
@@ -78,6 +84,9 @@ func (s *GoogleCloudExerciseStore) Create(ctx context.Context, exercise models.E
 }
 
 func (s *GoogleCloudExerciseStore) Update(ctx context.Context, id string, exercise models.Exercise) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	items, err := s.readAll(ctx)
 	if err != nil {
 		return err
@@ -86,13 +95,19 @@ func (s *GoogleCloudExerciseStore) Update(ctx context.Context, id string, exerci
 		if item.ID == id {
 			exercise.ID = id
 			items[i] = exercise
-			return s.writeAll(ctx, items)
+			if err := s.writeAll(ctx, items); err != nil {
+				return err
+			}
+			return nil
 		}
 	}
 	return ErrNotFound
 }
 
 func (s *GoogleCloudExerciseStore) Delete(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	items, err := s.readAll(ctx)
 	if err != nil {
 		return err
@@ -126,13 +141,19 @@ func (s *GoogleCloudExerciseStore) readAll(ctx context.Context) ([]models.Exerci
 		return nil, errors.New("storage client is not initialized")
 	}
 
-	reader, err := s.client.Bucket(s.bucket).Object(s.object).NewReader(ctx)
+	obj := s.client.Bucket(s.bucket).Object(s.object)
+	reader, err := obj.NewReader(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("open bucket object: %w", err)
 	}
 	defer func() {
 		_ = reader.Close()
 	}()
+
+	attrs, err := obj.Attrs(ctx)
+	if err == nil {
+		s.generation = attrs.Generation
+	}
 
 	data, err := io.ReadAll(reader)
 	if err != nil {
@@ -151,7 +172,12 @@ func (s *GoogleCloudExerciseStore) writeAll(ctx context.Context, exercises []mod
 		return err
 	}
 
-	writer := s.client.Bucket(s.bucket).Object(s.object).NewWriter(ctx)
+	obj := s.client.Bucket(s.bucket).Object(s.object)
+	if attrs, attrErr := obj.Attrs(ctx); attrErr == nil {
+		s.generation = attrs.Generation
+	}
+
+	writer := obj.NewWriter(ctx)
 	writer.ContentType = "application/json"
 	if _, err := writer.Write(data); err != nil {
 		_ = writer.Close()
@@ -159,6 +185,9 @@ func (s *GoogleCloudExerciseStore) writeAll(ctx context.Context, exercises []mod
 	}
 	if err := writer.Close(); err != nil {
 		return fmt.Errorf("close bucket object: %w", err)
+	}
+	if attrs, attrErr := obj.Attrs(ctx); attrErr == nil {
+		s.generation = attrs.Generation
 	}
 	return nil
 }
