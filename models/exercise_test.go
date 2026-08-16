@@ -41,3 +41,30 @@ func TestExerciseDecodesMongoFields(t *testing.T) {
 		t.Fatalf("expected focus Leg, got %q", exercise.Focus)
 	}
 }
+
+func TestExerciseDecodesLegacyMongoFieldNames(t *testing.T) {
+	raw := bson.M{
+		"Exercise":          "Barbell Hack Squat",
+		"Primary Muscles":   "Quads",
+		"Secondary Muscles": "Glutes, Adductors",
+		"Type":              "Compound",
+		"Focus":             "Leg",
+	}
+
+	b, err := bson.Marshal(raw)
+	if err != nil {
+		t.Fatalf("marshal legacy raw exercise: %v", err)
+	}
+
+	var exercise Exercise
+	if err := bson.Unmarshal(b, &exercise); err != nil {
+		t.Fatalf("unmarshal legacy exercise: %v", err)
+	}
+
+	if exercise.PrimaryMuscles != "Quads" {
+		t.Fatalf("expected legacy primary muscles Quads, got %q", exercise.PrimaryMuscles)
+	}
+	if exercise.SecondaryMuscles != "Glutes, Adductors" {
+		t.Fatalf("expected legacy secondary muscles Glutes, Adductors, got %q", exercise.SecondaryMuscles)
+	}
+}
