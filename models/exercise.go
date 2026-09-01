@@ -1,6 +1,11 @@
 package models
 
-import "go.mongodb.org/mongo-driver/bson"
+import (
+	"encoding/json"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Exercise struct {
 	ID               string `bson:"_id,omitempty" json:"id,omitempty"`
@@ -13,7 +18,7 @@ type Exercise struct {
 
 func (e *Exercise) UnmarshalBSON(data []byte) error {
 	type exerciseAlias struct {
-		ID               string `bson:"_id,omitempty"`
+		ID               any    `bson:"_id,omitempty"`
 		Exercise         string `bson:"Exercise"`
 		PrimaryMuscles   string `bson:"PrimaryMuscles"`
 		SecondaryMuscles string `bson:"SecondaryMuscles"`
@@ -29,10 +34,48 @@ func (e *Exercise) UnmarshalBSON(data []byte) error {
 	}
 
 	*e = Exercise{
-		ID:               raw.ID,
+		ID:               exerciseIDString(raw.ID),
 		Exercise:         raw.Exercise,
 		PrimaryMuscles:   firstNonEmpty(raw.PrimaryMuscles, raw.LegacyPrimary),
 		SecondaryMuscles: firstNonEmpty(raw.SecondaryMuscles, raw.LegacySecondary),
+		Type:             raw.Type,
+		Focus:            raw.Focus,
+	}
+	return nil
+}
+
+func exerciseIDString(id any) string {
+	switch value := id.(type) {
+	case primitive.ObjectID:
+		return value.Hex()
+	case string:
+		return value
+	default:
+		return ""
+	}
+}
+
+func (e *Exercise) UnmarshalJSON(data []byte) error {
+	type exerciseAlias struct {
+		ID               string `json:"id,omitempty"`
+		LegacyID         string `json:"_id,omitempty"`
+		Exercise         string `json:"Exercise"`
+		PrimaryMuscles   string `json:"PrimaryMuscles"`
+		SecondaryMuscles string `json:"SecondaryMuscles"`
+		Type             string `json:"Type"`
+		Focus            string `json:"Focus"`
+	}
+
+	var raw exerciseAlias
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	*e = Exercise{
+		ID:               firstNonEmpty(raw.ID, raw.LegacyID),
+		Exercise:         raw.Exercise,
+		PrimaryMuscles:   raw.PrimaryMuscles,
+		SecondaryMuscles: raw.SecondaryMuscles,
 		Type:             raw.Type,
 		Focus:            raw.Focus,
 	}

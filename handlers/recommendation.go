@@ -2,13 +2,9 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -16,7 +12,6 @@ import (
 	"gym-api/m/models"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 type RecommendationRequest struct {
@@ -28,27 +23,71 @@ type RecommendationRequest struct {
 	AvoidMuscles []string `json:"avoidMuscles"`
 }
 
-type RecommendationDay struct {
-	Name      string                   `json:"name"`
-	Focus     string                   `json:"focus"`
-	Exercises []RecommendationExercise `json:"exercises"`
-}
-
 type RecommendationExercise struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Sets  int    `json:"sets"`
-	Reps  string `json:"reps"`
-	Type  string `json:"type"`
-	Focus string `json:"focus"`
+	ID               string       `json:"id"`
+	Name             string       `json:"name"`
+	PrimaryMuscles   string       `json:"primary_muscles"`
+	SecondaryMuscles string       `json:"secondary_muscles,omitempty"`
+	Type             string       `json:"type"`
+	Focus            string       `json:"focus,omitempty"`
+	Sets             []models.Set `json:"sets"`
+	Order            int          `json:"order"`
+	Day              int          `json:"day"`
 }
 
-type RecommendationPlan struct {
-	Goal string              `json:"goal"`
-	Days []RecommendationDay `json:"days"`
+type RecommendationRoutine struct {
+	ID          string                   `json:"id,omitempty"`
+	Goal        string                   `json:"goal"`
+	Days        int                      `json:"days"`
+	Name        string                   `json:"name"`
+	Description string                   `json:"description"`
+	Exercises   []RecommendationExercise `json:"exercises"`
+	CreatedAt   time.Time                `json:"created_at"`
+	UpdatedAt   time.Time                `json:"updated_at"`
 }
 
-func BuildRoutineRecommendation(exercises []models.Exercise, goal string, days int, focus string) (*RecommendationPlan, error) {
+// generateSetsForExercise creates concrete Set data based on goal and exercise type.
+// Returns a slice of Set objects with concrete reps, weight, and rest values.
+func generateSetsForExercise(exercise models.Exercise, goal string) []models.Set {
+	isCompound := strings.Contains(strings.ToLower(exercise.Type), "compound")
+
+	var numSets, reps, restSeconds int
+
+	if goal == "powerlifting" {
+		reps = 4 // 3-5 average
+		if isCompound {
+			numSets = 5
+			restSeconds = 120 // 2 minutes
+		} else {
+			numSets = 4
+			restSeconds = 90
+		}
+	} else { // strength
+		reps = 6 // 5-8 average
+		if isCompound {
+			numSets = 4
+			restSeconds = 120
+		} else {
+			numSets = 3
+			restSeconds = 90
+		}
+	}
+
+	sets := make([]models.Set, numSets)
+	for i := 0; i < numSets; i++ {
+		sets[i] = models.Set{
+			Reps:   reps,
+			Weight: 0, // Default: no weight history available
+			Rest:   restSeconds,
+		}
+	}
+	return sets
+}
+
+// BuildRoutineRecommendation creates a response with each recommended exercise and its prescription
+// based on the provided exercises, goal, and number of training days.
+// Ensures minimum 5 exercises per training day.
+func BuildRoutineRecommendation(exercises []models.Exercise, goal string, days int, focus string) (*RecommendationRoutine, error) {
 	goal = strings.ToLower(strings.TrimSpace(goal))
 	if goal != "strength" && goal != "powerlifting" {
 		return nil, errors.New("goal must be strength or powerlifting")
@@ -60,116 +99,276 @@ func BuildRoutineRecommendation(exercises []models.Exercise, goal string, days i
 		return nil, errors.New("no exercises available to build a routine")
 	}
 
+	filtered := filterExercisesForFocus(exercises, focus)
+	if len(filtered) == 0 {
+		return nil, errors.New("no exercises matched the requested focus")
+	}
+
+	// Sort by relevance score (highest first)
+	sort.Slice(filtered, func(i, j int) bool {
+		return scoreExercise(filtered[i], goal) > scoreExercise(filtered[j], goal)
+	})
+
+	compoundExercises, isolationExercises := partitionExercisesByType(filtered)
+
+	// Distribute exercises across days ensuring minimum 5 per day
+	minPerDay := 5
+	routineExercises := make([]RecommendationExercise, 0, minPerDay*days)
+	exerciseOrder := 0
+	usedExerciseIDs := make(map[string]bool)
+
+	for dayIdx := 0; dayIdx < days; dayIdx++ {
+		dayExercises := selectExercisesForDay(
+			compoundExercises,
+			isolationExercises,
+			minPerDay,
+			dayIdx,
+			usedExerciseIDs,
+		)
+
+		// Include the source exercise details so clients can render the recommendation directly.
+		for _, ex := range dayExercises {
+			sets := generateSetsForExercise(ex, goal)
+			routineExercises = append(routineExercises, RecommendationExercise{
+				ID:               ex.ID,
+				Name:             ex.Exercise,
+				PrimaryMuscles:   ex.PrimaryMuscles,
+				SecondaryMuscles: ex.SecondaryMuscles,
+				Type:             ex.Type,
+				Focus:            ex.Focus,
+				Sets:             sets,
+				Order:            exerciseOrder,
+				Day:              dayIdx + 1,
+			})
+			exerciseOrder++
+		}
+	}
+
+	// Build routine name and description
+	goalCapitalized := strings.ToUpper(goal[:1]) + strings.ToLower(goal[1:])
+	routineName := fmt.Sprintf("Recommended %s Routine - %d Days", goalCapitalized, days)
+	routineDesc := fmt.Sprintf("%d-day %s routine with %d exercises per day", days, goal, minPerDay)
+	if len(routineExercises) < minPerDay*days {
+		routineDesc = fmt.Sprintf("%d-day %s routine with %d unique exercises", days, goal, len(routineExercises))
+	}
+	if strings.TrimSpace(focus) != "" {
+		routineName += fmt.Sprintf(" (%s)", focus)
+		routineDesc = fmt.Sprintf("%d-day %s routine focused on %s", days, goal, focus)
+		if len(routineExercises) < minPerDay*days {
+			routineDesc += fmt.Sprintf(" with %d unique exercises", len(routineExercises))
+		}
+	}
+
+	now := time.Now()
+	routine := &RecommendationRoutine{
+		Name:        routineName,
+		Description: routineDesc,
+		Goal:        goal,
+		Days:        days,
+		Exercises:   routineExercises,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	return routine, nil
+}
+
+func filterExercisesForFocus(exercises []models.Exercise, focus string) []models.Exercise {
+	normalizedFocus := normalizeFocus(focus)
+	if normalizedFocus == "" {
+		return exercises
+	}
+
+	accessoryFocus, hasAccessoryFocus := accessoryFocusFor(normalizedFocus)
 	filtered := make([]models.Exercise, 0, len(exercises))
 	for _, exercise := range exercises {
 		if strings.TrimSpace(exercise.Exercise) == "" {
 			continue
 		}
-		if strings.TrimSpace(focus) != "" && !strings.EqualFold(exercise.Focus, focus) && !strings.Contains(strings.ToLower(exercise.Exercise), strings.ToLower(focus)) {
+		if !hasAccessoryFocus && matchesFocus(exercise, normalizedFocus) {
+			filtered = append(filtered, exercise)
 			continue
 		}
-		filtered = append(filtered, exercise)
-	}
-	if len(filtered) == 0 {
-		return nil, errors.New("no exercises matched the requested focus")
-	}
-
-	sort.Slice(filtered, func(i, j int) bool {
-		return scoreExercise(filtered[i], goal) > scoreExercise(filtered[j], goal)
-	})
-
-	dayTemplates := []string{"Lower Body", "Upper Body", "Full Body"}
-	if days == 4 {
-		dayTemplates = []string{"Lower Body", "Upper Push", "Upper Pull", "Accessory"}
+		if isCompoundExercise(exercise) && matchesFocus(exercise, normalizedFocus) {
+			filtered = append(filtered, exercise)
+			continue
+		}
+		if isIsolationExercise(exercise) && normalizeFocus(exercise.Focus) == accessoryFocus {
+			filtered = append(filtered, exercise)
+		}
 	}
 
-	planDays := make([]RecommendationDay, 0, days)
-	base := make([]models.Exercise, 0, len(filtered))
-	for _, ex := range filtered {
-		base = append(base, ex)
+	return filtered
+}
+
+func accessoryFocusFor(focus string) (string, bool) {
+	switch normalizeFocus(focus) {
+	case "chest":
+		return "tricep", true
+	case "back":
+		return "bicep", true
+	case "leg":
+		return "shoulder", true
+	default:
+		return "", false
+	}
+}
+
+func matchesFocus(exercise models.Exercise, normalizedFocus string) bool {
+	return normalizeFocus(exercise.Focus) == normalizedFocus ||
+		strings.Contains(strings.ToLower(exercise.Exercise), normalizedFocus)
+}
+
+func normalizeFocus(focus string) string {
+	normalized := strings.ToLower(strings.TrimSpace(focus))
+	if normalized == "shoulders" {
+		return "shoulder"
+	}
+	return normalized
+}
+
+func partitionExercisesByType(exercises []models.Exercise) ([]models.Exercise, []models.Exercise) {
+	compoundExercises := make([]models.Exercise, 0, len(exercises))
+	isolationExercises := make([]models.Exercise, 0, len(exercises))
+
+	for _, exercise := range exercises {
+		if isCompoundExercise(exercise) {
+			compoundExercises = append(compoundExercises, exercise)
+		} else if isIsolationExercise(exercise) {
+			isolationExercises = append(isolationExercises, exercise)
+		}
 	}
 
-	for i := 0; i < days; i++ {
-		dayExercises := make([]RecommendationExercise, 0, 4)
-		for j := 0; j < len(base) && j < 3; j++ {
-			ex := base[(i+j)%len(base)]
-			if len(dayExercises) == 0 || !sameExercise(dayExercises, ex.ID) {
-				dayExercises = append(dayExercises, RecommendationExercise{
-					ID:    ex.ID,
-					Name:  ex.Exercise,
-					Sets:  4,
-					Reps:  defaultReps(goal),
-					Type:  ex.Type,
-					Focus: ex.Focus,
-				})
+	return compoundExercises, isolationExercises
+}
+
+func selectExercisesForDay(compounds, isolations []models.Exercise, count, dayIndex int, used map[string]bool) []models.Exercise {
+	selected := make([]models.Exercise, 0, count)
+	compoundStart := dayIndex * count
+	isolationStart := dayIndex * count
+
+	for slot := 0; slot < count; slot++ {
+		wantCompound := slot%2 == 0
+		var exercise models.Exercise
+		var found bool
+
+		if wantCompound {
+			exercise, found = nextAvailableExercise(compounds, compoundStart, used, nil)
+			compoundStart++
+			if !found {
+				exercise, found = nextAvailableExercise(isolations, isolationStart, used, nil)
+				isolationStart++
+			}
+		} else {
+			var previousCompound *models.Exercise
+			if len(selected) > 0 && isCompoundExercise(selected[len(selected)-1]) {
+				previousCompound = &selected[len(selected)-1]
+			}
+
+			exercise, found = nextAvailableExercise(isolations, isolationStart, used, previousCompound)
+			isolationStart++
+			if !found {
+				exercise, found = nextAvailableExercise(compounds, compoundStart, used, previousCompound)
+				compoundStart++
 			}
 		}
-		if len(dayExercises) == 0 {
-			dayExercises = append(dayExercises, RecommendationExercise{
-				ID:    base[0].ID,
-				Name:  base[0].Exercise,
-				Sets:  4,
-				Reps:  defaultReps(goal),
-				Type:  base[0].Type,
-				Focus: base[0].Focus,
-			})
+
+		if !found {
+			break
 		}
-		planDays = append(planDays, RecommendationDay{
-			Name:      fmt.Sprintf("Day %d - %s", i+1, dayTemplates[i%len(dayTemplates)]),
-			Focus:     strings.TrimSpace(base[0].Focus),
-			Exercises: dayExercises,
-		})
+
+		selected = append(selected, exercise)
+		used[exercise.ID] = true
 	}
 
-	return &RecommendationPlan{Goal: goal, Days: planDays}, nil
+	return selected
 }
 
-func scoreExercise(ex models.Exercise, goal string) int {
-	score := 0
-	if strings.Contains(strings.ToLower(ex.Type), "compound") {
-		score += 3
+func nextAvailableExercise(exercises []models.Exercise, start int, used map[string]bool, previousCompound *models.Exercise) (models.Exercise, bool) {
+	if len(exercises) == 0 {
+		return models.Exercise{}, false
 	}
-	if goal == "powerlifting" {
-		if strings.Contains(strings.ToLower(ex.Exercise), "squat") || strings.Contains(strings.ToLower(ex.Exercise), "bench") || strings.Contains(strings.ToLower(ex.Exercise), "deadlift") {
-			score += 5
+
+	for _, requireDifferentPrimaryMuscles := range []bool{true, false} {
+		for offset := 0; offset < len(exercises); offset++ {
+			exercise := exercises[(start+offset)%len(exercises)]
+			if used != nil && used[exercise.ID] {
+				continue
+			}
+			if requireDifferentPrimaryMuscles && previousCompound != nil && sharesPrimaryMuscle(exercise, *previousCompound) {
+				continue
+			}
+			return exercise, true
+		}
+		if previousCompound == nil {
+			break
 		}
 	}
-	if goal == "strength" {
-		if strings.Contains(strings.ToLower(ex.Exercise), "press") || strings.Contains(strings.ToLower(ex.Exercise), "squat") || strings.Contains(strings.ToLower(ex.Exercise), "deadlift") || strings.Contains(strings.ToLower(ex.Exercise), "row") {
-			score += 4
+
+	return models.Exercise{}, false
+}
+
+func isCompoundExercise(exercise models.Exercise) bool {
+	return strings.EqualFold(strings.TrimSpace(exercise.Type), "compound")
+}
+
+func isIsolationExercise(exercise models.Exercise) bool {
+	return strings.EqualFold(strings.TrimSpace(exercise.Type), "isolation")
+}
+
+func sharesPrimaryMuscle(first, second models.Exercise) bool {
+	firstMuscles := make(map[string]bool)
+	for _, muscle := range strings.Split(first.PrimaryMuscles, ",") {
+		muscle = strings.ToLower(strings.TrimSpace(muscle))
+		if muscle != "" {
+			firstMuscles[muscle] = true
 		}
 	}
-	if strings.EqualFold(ex.Focus, "Leg") {
-		score += 2
-	}
-	if strings.EqualFold(ex.Focus, "Upper") {
-		score += 2
-	}
-	return score
-}
-
-func defaultReps(goal string) string {
-	if goal == "powerlifting" {
-		return "3-5"
-	}
-	return "5-8"
-}
-
-func sameExercise(items []RecommendationExercise, id string) bool {
-	for _, item := range items {
-		if item.ID == id {
+	for _, muscle := range strings.Split(second.PrimaryMuscles, ",") {
+		muscle = strings.ToLower(strings.TrimSpace(muscle))
+		if firstMuscles[muscle] {
 			return true
 		}
 	}
 	return false
 }
 
+func scoreExercise(ex models.Exercise, goal string) int {
+	score := 0
+
+	// Bonus for compound exercises
+	if isCompoundExercise(ex) {
+		score += 3
+	}
+
+	// Goal-specific bonuses for key lift types
+	if goal == "powerlifting" {
+		exerciseLower := strings.ToLower(ex.Exercise)
+		if strings.Contains(exerciseLower, "squat") || strings.Contains(exerciseLower, "bench") || strings.Contains(exerciseLower, "deadlift") {
+			score += 5
+		}
+	}
+	if goal == "strength" {
+		exerciseLower := strings.ToLower(ex.Exercise)
+		if strings.Contains(exerciseLower, "press") || strings.Contains(exerciseLower, "squat") || strings.Contains(exerciseLower, "deadlift") || strings.Contains(exerciseLower, "row") {
+			score += 4
+		}
+	}
+
+	// Bonus for focus alignment
+	if strings.EqualFold(ex.Focus, "Leg") {
+		score += 2
+	}
+	if strings.EqualFold(ex.Focus, "Upper") {
+		score += 2
+	}
+
+	return score
+}
+
 func filterExercisesForRequest(exercises []models.Exercise, req RecommendationRequest) []models.Exercise {
 	filtered := make([]models.Exercise, 0, len(exercises))
 	for _, exercise := range exercises {
-		if strings.TrimSpace(req.Focus) != "" && !strings.EqualFold(exercise.Focus, req.Focus) && !strings.Contains(strings.ToLower(exercise.Exercise), strings.ToLower(req.Focus)) {
-			continue
-		}
 		if strings.TrimSpace(req.ExerciseType) != "" && !strings.EqualFold(exercise.Type, req.ExerciseType) {
 			continue
 		}
@@ -194,83 +393,32 @@ func filterExercisesForRequest(exercises []models.Exercise, req RecommendationRe
 	return filtered
 }
 
-func loadSampleExercises(path string) ([]models.Exercise, error) {
-	if strings.TrimSpace(path) == "" {
-		path = "sample.json"
-	}
-
-	_, currentFile, _, _ := runtime.Caller(0)
-	baseDir := filepath.Dir(currentFile)
-	repoRoot := filepath.Clean(filepath.Join(baseDir, ".."))
-
-	candidatePaths := []string{
-		path,
-		filepath.Clean(path),
-		filepath.Join(baseDir, path),
-		filepath.Join(repoRoot, path),
-		filepath.Join(repoRoot, "sample.json"),
-		filepath.Join(repoRoot, "excercises.json"),
-		filepath.Join(repoRoot, "sample"),
-		filepath.Join(repoRoot, "excercises"),
-		filepath.Join(".", path),
-		filepath.Join("..", path),
-		filepath.Join("..", "..", path),
-	}
-
-	if filepath.IsAbs(path) {
-		candidatePaths = []string{path}
-	}
-
-	var lastErr error
-	for _, candidate := range candidatePaths {
-		data, err := os.ReadFile(candidate)
-		if err == nil {
-			var exercises []models.Exercise
-			if err := json.Unmarshal(data, &exercises); err != nil {
-				return nil, err
-			}
-			return exercises, nil
-		}
-		lastErr = err
-	}
-	return nil, lastErr
-}
-
 func (h *RoutineHandler) Recommend(c *gin.Context) {
 	var req RecommendationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if h.ExerciseStore == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Exercise store is not configured"})
+		return
+	}
 
-	collection := h.DB.Database("gym-app").Collection("exercises")
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	cursor, err := collection.Find(ctx, bson.M{})
+	exercises, err := h.ExerciseStore.List(ctx, map[string]string{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	defer func() { _ = cursor.Close(ctx) }()
-
-	var exercises []models.Exercise
-	if err := cursor.All(ctx, &exercises); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	if len(exercises) == 0 {
-		if sample, sampleErr := loadSampleExercises("sample.json"); sampleErr == nil && len(sample) > 0 {
-			exercises = sample
-		}
-	}
 
 	exercises = filterExercisesForRequest(exercises, req)
-	plan, err := BuildRoutineRecommendation(exercises, req.Goal, req.Days, req.Focus)
+	routine, err := BuildRoutineRecommendation(exercises, req.Goal, req.Days, req.Focus)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, plan)
+	c.JSON(http.StatusOK, routine)
 }

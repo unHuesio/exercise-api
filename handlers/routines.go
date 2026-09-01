@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gym-api/m/models"
+	"gym-api/m/storage"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,7 +15,8 @@ import (
 )
 
 type RoutineHandler struct {
-	DB *mongo.Client
+	DB            *mongo.Client
+	ExerciseStore storage.ExerciseStore
 }
 
 func (h *RoutineHandler) GetAll(c *gin.Context) {

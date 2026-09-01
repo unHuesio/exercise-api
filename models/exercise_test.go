@@ -4,10 +4,13 @@ import (
 	"testing"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func TestExerciseDecodesMongoFields(t *testing.T) {
+	id := primitive.NewObjectID()
 	raw := bson.M{
+		"_id":              id,
 		"Exercise":         "Barbell Hack Squat",
 		"PrimaryMuscles":   "Quads",
 		"SecondaryMuscles": "Glutes, Adductors",
@@ -39,6 +42,9 @@ func TestExerciseDecodesMongoFields(t *testing.T) {
 	}
 	if exercise.Focus != "Leg" {
 		t.Fatalf("expected focus Leg, got %q", exercise.Focus)
+	}
+	if exercise.ID != id.Hex() {
+		t.Fatalf("expected ID %q, got %q", id.Hex(), exercise.ID)
 	}
 }
 

@@ -51,7 +51,7 @@ func main() {
 	exerciseHandler := &handlers.ExerciseHandler{Store: exerciseStore}
 	permissionHandler := &handlers.PermissionHandler{DB: client, Enforcer: enforcer}
 	authenticationHandler := &handlers.AuthenticationHandler{DB: client, Enforcer: enforcer}
-	routineHandler := &handlers.RoutineHandler{DB: client}
+	routineHandler := &handlers.RoutineHandler{DB: client, ExerciseStore: exerciseStore}
 
 	// Rate limiter setup
 	authRate, err := limiterlib.NewRateFromFormatted("10-M")
