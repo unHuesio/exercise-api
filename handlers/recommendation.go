@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gym-api/m/models"
+	"gym-api/m/storage"
 
 	"github.com/gin-gonic/gin"
 )
@@ -421,4 +422,68 @@ func (h *RoutineHandler) Recommend(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, routine)
+}
+
+func (h *RoutineHandler) RecommendAlternative(c *gin.Context) {
+	if h.ExerciseStore == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Exercise store is not configured"})
+		return
+	}
+
+	source, err := h.ExerciseStore.GetByID(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		if err == storage.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Exercise not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	exercises, err := h.ExerciseStore.List(c.Request.Context(), map[string]string{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	alternative, found := findAlternativeExercise(source, exercises)
+	if !found {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No alternative exercise found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, alternative)
+}
+
+func findAlternativeExercise(source models.Exercise, exercises []models.Exercise) (models.Exercise, bool) {
+	sourceFocus := normalizeFocus(source.Focus)
+	sourcePrimaryMuscles := normalizedPrimaryMuscles(source.PrimaryMuscles)
+	var alternative models.Exercise
+	found := false
+
+	for _, exercise := range exercises {
+		if exercise.ID == source.ID ||
+			normalizeFocus(exercise.Focus) != sourceFocus ||
+			normalizedPrimaryMuscles(exercise.PrimaryMuscles) != sourcePrimaryMuscles {
+			continue
+		}
+		if !found || exercise.ID < alternative.ID || (exercise.ID == alternative.ID && exercise.Exercise < alternative.Exercise) {
+			alternative = exercise
+			found = true
+		}
+	}
+
+	return alternative, found
+}
+
+func normalizedPrimaryMuscles(muscles string) string {
+	normalized := make([]string, 0)
+	for _, muscle := range strings.Split(muscles, ",") {
+		muscle = strings.ToLower(strings.TrimSpace(muscle))
+		if muscle != "" {
+			normalized = append(normalized, muscle)
+		}
+	}
+	sort.Strings(normalized)
+	return strings.Join(normalized, ",")
 }

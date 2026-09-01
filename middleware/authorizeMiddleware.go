@@ -11,6 +11,7 @@ func Authorize(enforcer *casbin.Enforcer, getObject func(*gin.Context)) gin.Hand
 	return func(c *gin.Context) {
 		object := c.GetString("inferred_object")
 		action := c.GetString("inferred_action")
+		println("Authorizing request with object:", object, "and action:", action)
 		if object == "" || action == "" {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Authorization context missing"})
 			return

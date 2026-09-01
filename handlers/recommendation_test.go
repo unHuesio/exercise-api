@@ -1,11 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"gym-api/m/models"
+	"gym-api/m/storage"
+
+	"github.com/gin-gonic/gin"
 )
 
 func TestBuildRoutineRecommendationStrength(t *testing.T) {
@@ -260,6 +266,102 @@ func TestBuildRoutineRecommendationFallsBackWhenMappedAccessoryIsUnavailable(t *
 			t.Fatalf("fallback exercise = %+v, want a chest compound", exercise)
 		}
 	}
+}
+
+func TestRecommendAlternativeReturnsMatchingExercise(t *testing.T) {
+	source := models.Exercise{ID: "source", Exercise: "Barbell Row", PrimaryMuscles: "Back, Biceps", Type: "Compound", Focus: "Back"}
+	store := &alternativeExerciseStore{exercises: []models.Exercise{
+		source,
+		{ID: "alternative-z", Exercise: "Cable Row", PrimaryMuscles: "Biceps, Back", Type: "Compound", Focus: "Back"},
+		{ID: "alternative-a", Exercise: "Chest Press", PrimaryMuscles: "Back, Biceps", Type: "Compound", Focus: "Back"},
+		{ID: "different-focus", Exercise: "Lat Pulldown", PrimaryMuscles: "Back, Biceps", Type: "Compound", Focus: "Chest"},
+	}}
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodGet, "/recommendations/alternative/source", nil)
+	context.Params = gin.Params{{Key: "id", Value: source.ID}}
+
+	(&RoutineHandler{ExerciseStore: store}).RecommendAlternative(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body = %s", recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+	var alternative models.Exercise
+	if err := json.Unmarshal(recorder.Body.Bytes(), &alternative); err != nil {
+		t.Fatalf("decode alternative response: %v", err)
+	}
+	if alternative.ID != "alternative-a" {
+		t.Fatalf("alternative ID = %q, want deterministic matching ID %q", alternative.ID, "alternative-a")
+	}
+}
+
+func TestRecommendAlternativeReturnsNotFoundWithoutMatch(t *testing.T) {
+	source := models.Exercise{ID: "source", Exercise: "Barbell Row", PrimaryMuscles: "Back", Type: "Compound", Focus: "Back"}
+	store := &alternativeExerciseStore{exercises: []models.Exercise{source}}
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodGet, "/recommendations/alternative/source", nil)
+	context.Params = gin.Params{{Key: "id", Value: source.ID}}
+
+	(&RoutineHandler{ExerciseStore: store}).RecommendAlternative(context)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body = %s", recorder.Code, http.StatusNotFound, recorder.Body.String())
+	}
+}
+
+func TestRecommendAlternativeReturnsNotFoundForMissingSource(t *testing.T) {
+	store := &alternativeExerciseStore{}
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodGet, "/recommendations/alternative/missing", nil)
+	context.Params = gin.Params{{Key: "id", Value: "missing"}}
+
+	(&RoutineHandler{ExerciseStore: store}).RecommendAlternative(context)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body = %s", recorder.Code, http.StatusNotFound, recorder.Body.String())
+	}
+}
+
+type alternativeExerciseStore struct {
+	exercises []models.Exercise
+}
+
+func (s *alternativeExerciseStore) List(_ context.Context, _ map[string]string) ([]models.Exercise, error) {
+	return s.exercises, nil
+}
+
+func (s *alternativeExerciseStore) GetByID(_ context.Context, id string) (models.Exercise, error) {
+	for _, exercise := range s.exercises {
+		if exercise.ID == id {
+			return exercise, nil
+		}
+	}
+	return models.Exercise{}, storage.ErrNotFound
+}
+
+func (s *alternativeExerciseStore) Create(_ context.Context, _ models.Exercise) (string, error) {
+	return "", nil
+}
+
+func (s *alternativeExerciseStore) Update(_ context.Context, _ string, _ models.Exercise) error {
+	return nil
+}
+
+func (s *alternativeExerciseStore) Delete(_ context.Context, _ string) error {
+	return nil
+}
+
+func (s *alternativeExerciseStore) Health(_ context.Context) error {
+	return nil
+}
+
+func (s *alternativeExerciseStore) BackendName() string {
+	return "test"
 }
 
 func TestBuildRoutineRecommendationRejectsInvalidGoal(t *testing.T) {
