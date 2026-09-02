@@ -1,0 +1,297 @@
+openapi: 3.0.3
+info:
+  title: Exercise API
+  version: 1.0.0
+  description: |
+    REST API for gym exercises, routines, recommendations, and Casbin RBAC policies.
+    Authenticate with a Google ID token at `/login`, then use the returned application JWT
+    as a `Bearer` token for protected operations. Authorization is determined by stored Casbin policies.
+tags:
+  - name: Authentication
+  - name: Health
+  - name: Exercises
+  - name: Routines
+  - name: Recommendations
+  - name: Permissions
+  - name: Documentation
+paths:
+  /openapi.yaml:
+    get:
+      tags: [Documentation]
+      summary: Download the OpenAPI document
+      responses:
+        '200':
+          description: OpenAPI 3.0 YAML document
+          content:
+            application/yaml:
+              schema: {type: string}
+  /docs:
+    get:
+      tags: [Documentation]
+      summary: View the interactive ReDoc API reference
+      responses:
+        '200':
+          description: ReDoc HTML page
+          content:
+            text/html:
+              schema: {type: string}
+  /register:
+    post:
+      tags: [Authentication]
+      summary: Register a Google-authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/GoogleTokenRequest'}
+      responses:
+        '200': {description: Registered, content: {application/json: {schema: {$ref: '#/components/schemas/RegistrationResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /login:
+    post:
+      tags: [Authentication]
+      summary: Exchange a verified Google ID token for an application JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/GoogleTokenRequest'}
+      responses:
+        '200': {description: Authenticated, content: {application/json: {schema: {$ref: '#/components/schemas/AuthResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /ping:
+    get:
+      tags: [Health]
+      summary: Check API availability
+      responses:
+        '200': {description: API is reachable, content: {application/json: {schema: {$ref: '#/components/schemas/MessageResponse'}}}}
+  /health/storage:
+    get:
+      tags: [Health]
+      summary: Check exercise storage health
+      responses:
+        '200': {description: Storage is healthy, content: {application/json: {schema: {$ref: '#/components/schemas/StorageHealth'}}}}
+        '503': {description: Storage is unavailable, content: {application/json: {schema: {$ref: '#/components/schemas/StorageHealth'}}}}
+  /me:
+    get:
+      tags: [Authentication]
+      summary: Get the authenticated user's profile
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: User profile, content: {application/json: {schema: {$ref: '#/components/schemas/UserProfile'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /exercises:
+    get:
+      tags: [Exercises]
+      summary: List exercises
+      security: [{bearerAuth: []}]
+      parameters:
+        - {$ref: '#/components/parameters/Focus'}
+        - {$ref: '#/components/parameters/ExerciseType'}
+        - {$ref: '#/components/parameters/Muscle'}
+      responses:
+        '200': {description: Exercises, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Exercise'}}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      tags: [Exercises]
+      summary: Create an exercise
+      security: [{bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/Exercise'}
+      responses:
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/IDResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /exercises/{id}:
+    parameters: [{$ref: '#/components/parameters/ExerciseID'}]
+    get:
+      tags: [Exercises]
+      summary: Get an exercise
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Exercise, content: {application/json: {schema: {$ref: '#/components/schemas/Exercise'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    put:
+      tags: [Exercises]
+      summary: Replace an exercise
+      security: [{bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/Exercise'}
+      responses:
+        '200': {$ref: '#/components/responses/Message'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    delete:
+      tags: [Exercises]
+      summary: Delete an exercise
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/Message'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /routines:
+    get:
+      tags: [Routines]
+      summary: List routines
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Routines, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Routine'}}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      tags: [Routines]
+      summary: Create a routine for the authenticated user
+      security: [{bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/Routine'}
+      responses:
+        '200': {description: Created routine, content: {application/json: {schema: {$ref: '#/components/schemas/Routine'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /routines/{id}:
+    parameters: [{$ref: '#/components/parameters/MongoID'}]
+    get:
+      tags: [Routines]
+      summary: Get a routine
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Routine, content: {application/json: {schema: {$ref: '#/components/schemas/Routine'}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '500': {$ref: '#/components/responses/InternalError'}}
+    put:
+      tags: [Routines]
+      summary: Replace a routine
+      security: [{bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/Routine'}
+      responses: {'200': {$ref: '#/components/responses/Message'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '500': {$ref: '#/components/responses/InternalError'}}
+    delete:
+      tags: [Routines]
+      summary: Delete a routine
+      security: [{bearerAuth: []}]
+      responses: {'200': {$ref: '#/components/responses/Message'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '500': {$ref: '#/components/responses/InternalError'}}
+  /recommendations/routine:
+    post:
+      tags: [Recommendations]
+      summary: Generate a routine recommendation
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RecommendationRequest'}}}
+      responses: {'200': {description: Recommendation, content: {application/json: {schema: {$ref: '#/components/schemas/RecommendationRoutine'}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '500': {$ref: '#/components/responses/InternalError'}}
+  /recommendations/alternative/{id}:
+    parameters: [{$ref: '#/components/parameters/ExerciseID'}]
+    get:
+      tags: [Recommendations]
+      summary: Find an equivalent exercise alternative
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Alternative exercise, content: {application/json: {schema: {$ref: '#/components/schemas/Exercise'}}}}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '500': {$ref: '#/components/responses/InternalError'}}
+  /permissions:
+    get:
+      tags: [Permissions]
+      summary: List Casbin permission policies
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Policies as subject-object-action tuples, content: {application/json: {schema: {type: array, items: {type: array, items: {type: string}}}}}}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '500': {$ref: '#/components/responses/InternalError'}}
+    post:
+      tags: [Permissions]
+      summary: Create a Casbin permission policy
+      security: [{bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/Permission'}
+      responses: {'200': {description: Created policy, content: {application/json: {schema: {$ref: '#/components/schemas/Permission'}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '500': {$ref: '#/components/responses/InternalError'}}
+    delete:
+      tags: [Permissions]
+      summary: Delete a Casbin permission policy
+      security: [{bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/Permission'}
+      responses: {'200': {$ref: '#/components/responses/Message'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '500': {$ref: '#/components/responses/InternalError'}}
+  /permissions/role/{subject}:
+    get:
+      tags: [Permissions]
+      summary: List policies for a subject
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/Subject'}]
+      responses: {'200': {description: Policies, content: {application/json: {schema: {type: array, items: {type: array, items: {type: string}}}}}}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '500': {$ref: '#/components/responses/InternalError'}}
+  /permissions/groups:
+    get:
+      tags: [Permissions]
+      summary: List roles and assigned users
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Role to users map, content: {application/json: {schema: {type: object, additionalProperties: {type: array, items: {type: string}}}}}}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '500': {$ref: '#/components/responses/InternalError'}}
+    post:
+      tags: [Permissions]
+      summary: Assign a user to a role
+      security: [{bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/GroupingPolicy'}
+      responses: {'200': {description: Assignment, content: {application/json: {schema: {$ref: '#/components/schemas/GroupingPolicy'}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '500': {$ref: '#/components/responses/InternalError'}}
+    delete:
+      tags: [Permissions]
+      summary: Remove a user from a role
+      security: [{bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/GroupingPolicy'}
+      responses: {'200': {$ref: '#/components/responses/Message'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '500': {$ref: '#/components/responses/InternalError'}}
+  /permissions/groups/{user}:
+    get:
+      tags: [Permissions]
+      summary: List roles assigned to a user
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/User'}]
+      responses: {'200': {description: Roles, content: {application/json: {schema: {type: array, items: {type: string}}}}}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '500': {$ref: '#/components/responses/InternalError'}}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    ExerciseID: {name: id, in: path, required: true, schema: {type: string}, description: Exercise identifier.}
+    MongoID: {name: id, in: path, required: true, schema: {type: string, pattern: '^[a-fA-F0-9]{24}$'}, description: MongoDB ObjectID.}
+    Subject: {name: subject, in: path, required: true, schema: {type: string}}
+    User: {name: user, in: path, required: true, schema: {type: string}}
+    Focus: {name: focus, in: query, schema: {type: string}}
+    ExerciseType: {name: type, in: query, schema: {type: string}}
+    Muscle: {name: muscle, in: query, schema: {type: string}}
+  requestBodies:
+    Exercise: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Exercise'}}}}
+    Routine: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/RoutineInput'}}}}
+    Permission: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Permission'}}}}
+    GroupingPolicy: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/GroupingPolicy'}}}}
+  responses:
+    Message: {description: Completed, content: {application/json: {schema: {$ref: '#/components/schemas/MessageResponse'}}}}
+    BadRequest: {description: Invalid request, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}}
+    Unauthorized: {description: Missing, invalid, or expired bearer token, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}}
+    Forbidden: {description: The authenticated subject lacks the Casbin policy, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}}
+    NotFound: {description: Resource not found, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}}
+    RateLimited: {description: Request rate limit exceeded}
+    InternalError: {description: Server error, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}}
+  schemas:
+    GoogleTokenRequest: {type: object, required: [id_token], properties: {id_token: {type: string, description: Google OpenID Connect ID token}}}
+    AuthResponse: {type: object, required: [token, roles, isAdmin], properties: {token: {type: string}, roles: {type: array, items: {type: string}}, isAdmin: {type: boolean}}}
+    RegistrationResponse: {type: object, required: [message, roles, isAdmin], properties: {message: {type: string}, roles: {type: array, items: {type: string}}, isAdmin: {type: boolean}}}
+    UserProfile: {type: object, required: [id, email, provider, roles, isAdmin], properties: {id: {type: string}, email: {type: string, format: email}, provider: {type: string, example: google}, roles: {type: array, items: {type: string}}, isAdmin: {type: boolean}}}
+    Exercise: {type: object, required: [Exercise, PrimaryMuscles, Type], properties: {id: {type: string, readOnly: true}, Exercise: {type: string}, PrimaryMuscles: {type: string}, SecondaryMuscles: {type: string}, Type: {type: string}, Focus: {type: string}}}
+    Set: {type: object, properties: {reps: {type: integer}, weight: {type: number, format: double}, rest: {type: integer}}}
+    RoutineExercise: {type: object, properties: {exercise_id: {type: string}, sets: {type: array, items: {$ref: '#/components/schemas/Set'}}, order: {type: integer}}}
+    RoutineInput: {type: object, required: [name], properties: {name: {type: string}, description: {type: string}, exercises: {type: array, items: {$ref: '#/components/schemas/RoutineExercise'}}}}
+    Routine: {allOf: [{$ref: '#/components/schemas/RoutineInput'}, {type: object, properties: {id: {type: string}, user_id: {type: string, readOnly: true}, created_at: {type: string, format: date-time}, updated_at: {type: string, format: date-time}}}]}
+    RecommendationRequest: {type: object, required: [goal, days], properties: {goal: {type: string, enum: [strength, powerlifting]}, days: {type: integer, enum: [3, 4]}, focus: {type: string}, exerciseType: {type: string}, experience: {type: string}, avoidMuscles: {type: array, items: {type: string}}}}
+    RecommendationExercise: {type: object, properties: {id: {type: string}, name: {type: string}, primary_muscles: {type: string}, secondary_muscles: {type: string}, type: {type: string}, focus: {type: string}, sets: {type: array, items: {$ref: '#/components/schemas/Set'}}, order: {type: integer}, day: {type: integer}}}
+    RecommendationRoutine: {type: object, properties: {id: {type: string}, goal: {type: string}, days: {type: integer}, name: {type: string}, description: {type: string}, exercises: {type: array, items: {$ref: '#/components/schemas/RecommendationExercise'}}, created_at: {type: string, format: date-time}, updated_at: {type: string, format: date-time}}}
+    Permission: {type: object, required: [subject, object, action], properties: {subject: {type: string}, object: {type: string}, action: {type: string, enum: [read, create, update, delete]}}}
+    GroupingPolicy: {type: object, required: [user, role], properties: {user: {type: string}, role: {type: string}}}
+    MessageResponse: {type: object, properties: {message: {type: string}}}
+    IDResponse: {type: object, required: [id], properties: {id: {type: string}}}
+    ErrorResponse: {type: object, required: [error], properties: {error: {type: string}}}
+    StorageHealth: {type: object, required: [status, backend], properties: {status: {type: string, enum: [healthy, unhealthy]}, backend: {type: string}, error: {type: string}}}

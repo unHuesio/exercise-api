@@ -81,6 +81,8 @@ func main() {
 
 	r.Use(generalLimiterMiddleware)
 
+	registerDocumentationRoutes(r)
+
 	// Public routes
 	r.GET("/health/storage", func(c *gin.Context) {
 		if err := exerciseStore.Health(context.Background()); err != nil {

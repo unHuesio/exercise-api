@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Exercise API reference</title>
+  </head>
+  <body>
+    <div id="redoc"></div>
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    <script>
+      Redoc.init("/openapi.yaml", {}, document.getElementById("redoc"));
+    </script>
+  </body>
+</html>
