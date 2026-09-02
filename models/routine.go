@@ -8,7 +8,7 @@ import (
 
 type Set struct {
 	Reps   int     `json:"reps" bson:"reps"`
-	Weight float64 `json:"weight" bson:"weight"`
+	Weight float64 `json:"weight" bson:"weight,omitempty"`
 	Rest   int     `json:"rest" bson:"rest"`
 }
 

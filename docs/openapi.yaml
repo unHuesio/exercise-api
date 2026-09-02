@@ -150,7 +150,7 @@ paths:
   /routines:
     get:
       tags: [Routines]
-      summary: List routines
+      summary: List routines owned by the authenticated user
       security: [{bearerAuth: []}]
       responses:
         '200': {description: Routines, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Routine'}}}}}
@@ -172,29 +172,30 @@ paths:
     parameters: [{$ref: '#/components/parameters/MongoID'}]
     get:
       tags: [Routines]
-      summary: Get a routine
+      summary: Get an owned routine
       security: [{bearerAuth: []}]
       responses: {'200': {description: Routine, content: {application/json: {schema: {$ref: '#/components/schemas/Routine'}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '500': {$ref: '#/components/responses/InternalError'}}
     put:
       tags: [Routines]
-      summary: Replace a routine
+      summary: Replace an owned routine
       security: [{bearerAuth: []}]
       requestBody: {$ref: '#/components/requestBodies/Routine'}
       responses: {'200': {$ref: '#/components/responses/Message'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '500': {$ref: '#/components/responses/InternalError'}}
     delete:
       tags: [Routines]
-      summary: Delete a routine
+      summary: Delete an owned routine
       security: [{bearerAuth: []}]
       responses: {'200': {$ref: '#/components/responses/Message'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '500': {$ref: '#/components/responses/InternalError'}}
   /recommendations/routine:
     post:
       tags: [Recommendations]
-      summary: Generate a one-day routine recommendation
+      summary: Generate and save a one-day routine recommendation
+      description: Each successful recommendation is saved as a routine owned by the authenticated user and can be managed through the routine endpoints. The response includes recommendation exercise details but omits set weight.
       security: [{bearerAuth: []}]
       requestBody:
         required: true
         content: {application/json: {schema: {$ref: '#/components/schemas/RecommendationRequest'}}}
-      responses: {'200': {description: Recommendation, content: {application/json: {schema: {$ref: '#/components/schemas/RecommendationRoutine'}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '500': {$ref: '#/components/responses/InternalError'}}
+      responses: {'200': {description: Saved routine recommendation, content: {application/json: {schema: {$ref: '#/components/schemas/RecommendationRoutine'}}}}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '500': {$ref: '#/components/responses/InternalError'}}
   /recommendations/alternative/{id}:
     parameters: [{$ref: '#/components/parameters/ExerciseID'}]
     get:
@@ -289,7 +290,7 @@ components:
     RecommendationRequest: {type: object, required: [goal], properties: {goal: {type: string, enum: [strength, powerlifting]}, focus: {type: string}, exerciseType: {type: string}, avoidMuscles: {type: array, items: {type: string}}}}
     RecommendationSet: {type: object, properties: {reps: {type: integer}, rest: {type: integer}}}
     RecommendationExercise: {type: object, properties: {id: {type: string}, name: {type: string}, primary_muscles: {type: string}, secondary_muscles: {type: string}, type: {type: string}, focus: {type: string}, sets: {type: array, items: {$ref: '#/components/schemas/RecommendationSet'}}, order: {type: integer}, day: {type: integer, enum: [1]}}}
-    RecommendationRoutine: {type: object, properties: {id: {type: string}, goal: {type: string}, days: {type: integer, enum: [1]}, name: {type: string}, description: {type: string}, exercises: {type: array, items: {$ref: '#/components/schemas/RecommendationExercise'}}, created_at: {type: string, format: date-time}, updated_at: {type: string, format: date-time}}}
+    RecommendationRoutine: {type: object, properties: {id: {type: string}, goal: {type: string}, name: {type: string}, description: {type: string}, exercises: {type: array, items: {$ref: '#/components/schemas/RecommendationExercise'}}, created_at: {type: string, format: date-time}, updated_at: {type: string, format: date-time}}}
     Permission: {type: object, required: [subject, object, action], properties: {subject: {type: string}, object: {type: string}, action: {type: string, enum: [read, create, update, delete]}}}
     GroupingPolicy: {type: object, required: [user, role], properties: {user: {type: string}, role: {type: string}}}
     MessageResponse: {type: object, properties: {message: {type: string}}}

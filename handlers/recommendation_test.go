@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"gym-api/m/storage"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func TestBuildRoutineRecommendationStrength(t *testing.T) {
@@ -46,9 +48,6 @@ func TestBuildRoutineRecommendationStrength(t *testing.T) {
 	if routine.Exercises[0].Day != 1 {
 		t.Fatalf("first exercise day = %d, want 1", routine.Exercises[0].Day)
 	}
-	if routine.Days != 1 {
-		t.Fatalf("routine days = %d, want 1", routine.Days)
-	}
 	response, err := json.Marshal(routine)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -61,6 +60,9 @@ func TestBuildRoutineRecommendationStrength(t *testing.T) {
 	}
 	if strings.Contains(string(response), `"weight"`) {
 		t.Fatalf("response must not expose set weight, got %s", response)
+	}
+	if strings.Contains(string(response), `"days"`) {
+		t.Fatalf("response must not expose days, got %s", response)
 	}
 	// Strength goal with compound should have 4 sets
 	if routine.Exercises[0].Sets[0].Reps != 6 {
@@ -274,48 +276,81 @@ func TestBuildRoutineRecommendationFallsBackWhenMappedAccessoryIsUnavailable(t *
 	}
 }
 
-func TestRecommendUsesOneDayRequestAndOmitsWeight(t *testing.T) {
+func TestRecommendSavesAndReturnsRecommendationWithoutWeight(t *testing.T) {
 	store := &alternativeExerciseStore{exercises: []models.Exercise{
-		{ID: "001", Exercise: "Barbell Squat", PrimaryMuscles: "Quads, Glutes", Type: "Compound", Focus: "Leg"},
-		{ID: "002", Exercise: "Leg Extension", PrimaryMuscles: "Quads", Type: "Isolation", Focus: "Leg"},
+		{ID: "65b04918bc4e54a3b92c8101", Exercise: "Barbell Squat", PrimaryMuscles: "Quads, Glutes", Type: "Compound", Focus: "Leg"},
+		{ID: "65b04918bc4e54a3b92c8102", Exercise: "Leg Extension", PrimaryMuscles: "Quads", Type: "Isolation", Focus: "Leg"},
 	}}
+	userID := primitive.NewObjectID()
+	routineID := primitive.NewObjectID()
+	saved := false
 
 	recorder := httptest.NewRecorder()
-	context, _ := gin.CreateTestContext(recorder)
-	context.Request = httptest.NewRequest(
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Request = httptest.NewRequest(
 		http.MethodPost,
 		"/recommendations/routine",
 		strings.NewReader(`{"goal":"strength"}`),
 	)
-	context.Request.Header.Set("Content-Type", "application/json")
+	ginContext.Request.Header.Set("Content-Type", "application/json")
+	ginContext.Set("user_id", userID.Hex())
 
-	(&RoutineHandler{ExerciseStore: store}).Recommend(context)
+	(&RoutineHandler{
+		ExerciseStore: store,
+		saveRoutine: func(_ context.Context, routine models.Routine) (models.Routine, error) {
+			saved = true
+			if routine.UserID != userID {
+				t.Fatalf("routine user ID = %s, want %s", routine.UserID.Hex(), userID.Hex())
+			}
+			if len(routine.Exercises) == 0 || routine.Exercises[0].Sets[0].Weight != 0 {
+				t.Fatalf("saved routine exercises = %+v, want generated sets with zero weight", routine.Exercises)
+			}
+			routine.ID = routineID
+			return routine, nil
+		},
+	}).Recommend(ginContext)
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body = %s", recorder.Code, http.StatusOK, recorder.Body.String())
 	}
+	if !saved {
+		t.Fatal("expected recommendation to be persisted")
+	}
 
-	var response struct {
-		Days      int `json:"days"`
-		Exercises []struct {
-			Day  int `json:"day"`
-			Sets []struct {
-				Reps int `json:"reps"`
-				Rest int `json:"rest"`
-			} `json:"sets"`
-		} `json:"exercises"`
-	}
+	var response RecommendationRoutine
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
-		t.Fatalf("decode recommendation response: %v", err)
+		t.Fatalf("decode saved recommendation response: %v", err)
 	}
-	if response.Days != 1 {
-		t.Fatalf("response days = %d, want 1", response.Days)
+	if response.ID != routineID.Hex() {
+		t.Fatalf("response ID = %s, want %s", response.ID, routineID.Hex())
 	}
-	if len(response.Exercises) == 0 || response.Exercises[0].Day != 1 {
-		t.Fatalf("response exercises = %+v, want exercises assigned to day 1", response.Exercises)
+	if len(response.Exercises) == 0 || response.Exercises[0].Name != "Barbell Squat" {
+		t.Fatalf("response exercises = %+v, want exercise names", response.Exercises)
 	}
 	if strings.Contains(recorder.Body.String(), `"weight"`) {
 		t.Fatalf("response must not expose set weight, got %s", recorder.Body.String())
+	}
+}
+
+func TestRecommendReturnsServerErrorWhenPersistenceFails(t *testing.T) {
+	store := &alternativeExerciseStore{exercises: []models.Exercise{
+		{ID: "65b04918bc4e54a3b92c8101", Exercise: "Barbell Squat", PrimaryMuscles: "Quads, Glutes", Type: "Compound", Focus: "Leg"},
+	}}
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Request = httptest.NewRequest(http.MethodPost, "/recommendations/routine", strings.NewReader(`{"goal":"strength"}`))
+	ginContext.Request.Header.Set("Content-Type", "application/json")
+	ginContext.Set("user_id", primitive.NewObjectID().Hex())
+
+	(&RoutineHandler{
+		ExerciseStore: store,
+		saveRoutine: func(_ context.Context, routine models.Routine) (models.Routine, error) {
+			return models.Routine{}, errors.New("database unavailable")
+		},
+	}).Recommend(ginContext)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d; body = %s", recorder.Code, http.StatusInternalServerError, recorder.Body.String())
 	}
 }
 

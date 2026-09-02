@@ -42,7 +42,6 @@ type RecommendationExercise struct {
 type RecommendationRoutine struct {
 	ID          string                   `json:"id,omitempty"`
 	Goal        string                   `json:"goal"`
-	Days        int                      `json:"days"`
 	Name        string                   `json:"name"`
 	Description string                   `json:"description"`
 	Exercises   []RecommendationExercise `json:"exercises"`
@@ -164,7 +163,6 @@ func BuildRoutineRecommendation(exercises []models.Exercise, goal, focus string)
 		Name:        routineName,
 		Description: routineDesc,
 		Goal:        goal,
-		Days:        days,
 		Exercises:   routineExercises,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -414,13 +412,30 @@ func (h *RoutineHandler) Recommend(c *gin.Context) {
 	}
 
 	exercises = filterExercisesForRequest(exercises, req)
-	routine, err := BuildRoutineRecommendation(exercises, req.Goal, req.Focus)
+	recommendation, err := BuildRoutineRecommendation(exercises, req.Goal, req.Focus)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, routine)
+	userID, err := routineUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	routine, err := routineFromRecommendation(recommendation, userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	routine, err = h.persistRoutine(ctx, routine)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	recommendation.ID = routine.ID.Hex()
+	c.JSON(http.StatusOK, recommendation)
 }
 
 func (h *RoutineHandler) RecommendAlternative(c *gin.Context) {
