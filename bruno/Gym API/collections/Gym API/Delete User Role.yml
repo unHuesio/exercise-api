@@ -1,0 +1,27 @@
+info:
+  name: Delete User Role
+  type: http
+  seq: 14
+
+http:
+  method: DELETE
+  url: http://localhost:8080/permissions/groups
+  headers:
+    - name: Authorization
+      value: Bearer ***REMOVED-TOKEN***
+  body:
+    type: json
+    data: |-
+      {
+        "user": "melisa.dlg@gmail.com",
+        "role": "admin"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+docs: This request retrieves a list of users from the JSONPlaceholder API.

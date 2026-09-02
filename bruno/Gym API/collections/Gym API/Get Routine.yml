@@ -1,0 +1,28 @@
+info:
+  name: Get Routine
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: http://localhost:8080/recommendations/routine
+  headers:
+    - name: Authorization
+      value: Bearer ***REMOVED-TOKEN***
+  body:
+    type: json
+    data: |-
+      {
+        "goal": "powerlifting",
+        "focus": "Bicep",
+        "avoidMuscles": ["Lower Back"]
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+docs: This request retrieves a list of users from the JSONPlaceholder API.

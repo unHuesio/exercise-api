@@ -1,0 +1,30 @@
+info:
+  name: Update Excercise
+  type: http
+  seq: 11
+
+http:
+  method: PUT
+  url: http://localhost:8080/exercises/6a986de9a7002e71f501616d
+  headers:
+    - name: Authorization
+      value: Bearer  ***REMOVED-TOKEN***
+  body:
+    type: json
+    data: |-
+      {
+        "Exercise": "test 1",
+        "PrimaryMuscles": "string",
+        "SecondaryMuscles": "string",
+        "Type": "string",
+        "Focus": "string"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+docs: This request retrieves a list of users from the JSONPlaceholder API.

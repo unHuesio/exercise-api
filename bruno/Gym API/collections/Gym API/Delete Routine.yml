@@ -1,0 +1,20 @@
+info:
+  name: Delete Routine
+  type: http
+  seq: 19
+
+http:
+  method: DELETE
+  url: http://localhost:8080/routines/6a987552d7c7e337e5d3860e
+  headers:
+    - name: Authorization
+      value: Bearer ***REMOVED-TOKEN***
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+docs: This request retrieves a list of users from the JSONPlaceholder API.

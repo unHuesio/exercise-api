@@ -1,0 +1,12 @@
+opencollection: 1.0.0
+info:
+  name: "Gym API"
+  type: workspace
+
+collections:
+  - name: "Gym API"
+    path: "collections/Gym API"
+
+specs:
+
+docs: ''

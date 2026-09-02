@@ -1,0 +1,20 @@
+info:
+  name: Get Excercises Alternative
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: http://localhost:8080/recommendations/alternative/6a808eb89702b24492dd85d6
+  headers:
+    - name: Authorization
+      value: Bearer ***REMOVED-TOKEN***
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+docs: This request retrieves a list of users from the JSONPlaceholder API.

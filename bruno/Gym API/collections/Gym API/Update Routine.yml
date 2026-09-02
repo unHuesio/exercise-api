@@ -1,0 +1,171 @@
+info:
+  name: Update Routine
+  type: http
+  seq: 20
+
+http:
+  method: PUT
+  url: http://localhost:8080/routines/6a987644d7c7e337e5d3860f
+  headers:
+    - name: Authorization
+      value: Bearer ***REMOVED-TOKEN***
+  body:
+    type: json
+    data: |-
+      {
+        "goal": "powerlifting",
+        "days": 1,
+        "name": "Recommended Powerlifting Routine - 1 Days (Bicep)",
+        "description": "3-day powerlifting routine focused on Bicep",
+        "exercises": [
+          {
+            "id": "6a808eb89702b24492dd860c",
+            "name": "Barbell Curls",
+            "primary_muscles": "Biceps",
+            "secondary_muscles": "Forearm Flexors",
+            "type": "Isolation",
+            "focus": "Bicep",
+            "sets": [
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              }
+            ],
+            "order": 0,
+            "day": 1
+          },
+          {
+            "id": "6a808eb89702b24492dd860f",
+            "name": "Dumbbell Curls",
+            "primary_muscles": "Biceps",
+            "secondary_muscles": "Forearm Flexors",
+            "type": "Isolation",
+            "focus": "Bicep",
+            "sets": [
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              }
+            ],
+            "order": 1,
+            "day": 1
+          },
+          {
+            "id": "6a808eb89702b24492dd8610",
+            "name": "Hammer Curls",
+            "primary_muscles": "Biceps",
+            "secondary_muscles": "Forearm Flexors",
+            "type": "Isolation",
+            "focus": "Bicep",
+            "sets": [
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              }
+            ],
+            "order": 2,
+            "day": 1
+          },
+          {
+            "id": "6a808eb89702b24492dd8611",
+            "name": "Barbell Preacher Curl",
+            "primary_muscles": "Biceps",
+            "secondary_muscles": "Forearm Flexors",
+            "type": "Isolation",
+            "focus": "Bicep",
+            "sets": [
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              }
+            ],
+            "order": 3,
+            "day": 1
+          },
+          {
+            "id": "6a808eb89702b24492dd8612",
+            "name": "Incline Dumbbell Curl",
+            "primary_muscles": "Biceps",
+            "secondary_muscles": "Forearm Flexors",
+            "type": "Isolation",
+            "focus": "Bicep",
+            "sets": [
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              },
+              {
+                "reps": 4,
+                "rest": 90
+              }
+            ],
+            "order": 4,
+            "day": 1
+          }
+        ]
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+docs: This request retrieves a list of users from the JSONPlaceholder API.
