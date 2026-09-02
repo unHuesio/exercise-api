@@ -43,7 +43,7 @@ func TestOpenAPISpecCoversRegisteredRoutes(t *testing.T) {
 	spec := string(openAPISpec)
 	for _, route := range []string{
 		"/openapi.yaml:", "/docs:",
-		"/register:", "/login:", "/health/storage:", "/ping:", "/me:",
+		"/register:", "/login:", "/healthcheck:", "/health/storage:", "/me:",
 		"/exercises:", "/exercises/{id}:", "/routines:", "/routines/{id}:",
 		"/recommendations/routine:", "/recommendations/alternative/{id}:",
 		"/permissions:", "/permissions/role/{subject}:", "/permissions/groups:",

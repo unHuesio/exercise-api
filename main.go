@@ -103,9 +103,9 @@ func main() {
 	meRouter.Use(middleware.Auth(middleware.JWTAuthMiddleware()))
 	meRouter.GET("/me", authenticationHandler.Me)
 
-	r.GET("/ping", func(c *gin.Context) {
+	r.GET("/healthcheck", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
+			"status": "healthy",
 		})
 	})
 

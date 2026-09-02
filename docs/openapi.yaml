@@ -65,12 +65,12 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '429': {$ref: '#/components/responses/RateLimited'}
         '500': {$ref: '#/components/responses/InternalError'}
-  /ping:
+  /healthcheck:
     get:
       tags: [Health]
       summary: Check API availability
       responses:
-        '200': {description: API is reachable, content: {application/json: {schema: {$ref: '#/components/schemas/MessageResponse'}}}}
+        '200': {description: API is healthy, content: {application/json: {schema: {$ref: '#/components/schemas/HealthCheck'}}}}
   /health/storage:
     get:
       tags: [Health]
@@ -294,6 +294,7 @@ components:
     Permission: {type: object, required: [subject, object, action], properties: {subject: {type: string}, object: {type: string}, action: {type: string, enum: [read, create, update, delete]}}}
     GroupingPolicy: {type: object, required: [user, role], properties: {user: {type: string}, role: {type: string}}}
     MessageResponse: {type: object, properties: {message: {type: string}}}
+    HealthCheck: {type: object, required: [status], properties: {status: {type: string, enum: [healthy]}}}
     IDResponse: {type: object, required: [id], properties: {id: {type: string}}}
     ErrorResponse: {type: object, required: [error], properties: {error: {type: string}}}
     StorageHealth: {type: object, required: [status, backend], properties: {status: {type: string, enum: [healthy, unhealthy]}, backend: {type: string}, error: {type: string}}}
