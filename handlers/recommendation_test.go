@@ -24,15 +24,15 @@ func TestBuildRoutineRecommendationStrength(t *testing.T) {
 		{ID: "006", Exercise: "Dumbbell Curl", PrimaryMuscles: "Biceps", SecondaryMuscles: "Forearms", Type: "Isolation", Focus: "Upper"},
 	}
 
-	routine, err := BuildRoutineRecommendation(exercises, "strength", 3, "")
+	routine, err := BuildRoutineRecommendation(exercises, "strength", "")
 	if err != nil {
 		t.Fatalf("BuildRoutineRecommendation() error = %v", err)
 	}
 	if routine == nil {
 		t.Fatal("expected routine, got nil")
 	}
-	// A recommendation is shorter when it has fewer unique candidates than requested.
-	expectedExercises := len(exercises)
+	// A one-day recommendation contains up to five exercises.
+	expectedExercises := 5
 	if len(routine.Exercises) != expectedExercises {
 		t.Fatalf("len(routine.Exercises) = %d, want %d", len(routine.Exercises), expectedExercises)
 	}
@@ -46,6 +46,9 @@ func TestBuildRoutineRecommendationStrength(t *testing.T) {
 	if routine.Exercises[0].Day != 1 {
 		t.Fatalf("first exercise day = %d, want 1", routine.Exercises[0].Day)
 	}
+	if routine.Days != 1 {
+		t.Fatalf("routine days = %d, want 1", routine.Days)
+	}
 	response, err := json.Marshal(routine)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -55,6 +58,9 @@ func TestBuildRoutineRecommendationStrength(t *testing.T) {
 	}
 	if strings.Contains(string(response), `"id":""`) {
 		t.Fatalf("response must omit the non-persisted routine ID, got %s", response)
+	}
+	if strings.Contains(string(response), `"weight"`) {
+		t.Fatalf("response must not expose set weight, got %s", response)
 	}
 	// Strength goal with compound should have 4 sets
 	if routine.Exercises[0].Sets[0].Reps != 6 {
@@ -72,14 +78,14 @@ func TestBuildRoutineRecommendationPowerlifting(t *testing.T) {
 		{ID: "006", Exercise: "Close-Grip Bench", PrimaryMuscles: "Triceps, Chest", SecondaryMuscles: "Shoulders", Type: "Compound", Focus: "Upper"},
 	}
 
-	routine, err := BuildRoutineRecommendation(exercises, "powerlifting", 4, "")
+	routine, err := BuildRoutineRecommendation(exercises, "powerlifting", "")
 	if err != nil {
 		t.Fatalf("BuildRoutineRecommendation() error = %v", err)
 	}
 	if routine == nil {
 		t.Fatal("expected routine, got nil")
 	}
-	expectedExercises := len(exercises)
+	expectedExercises := 5
 	if len(routine.Exercises) != expectedExercises {
 		t.Fatalf("len(routine.Exercises) = %d, want %d", len(routine.Exercises), expectedExercises)
 	}
@@ -99,13 +105,13 @@ func TestBuildRoutineRecommendationDoesNotRepeatExercises(t *testing.T) {
 		{ID: "006", Exercise: "Dumbbell Curl", PrimaryMuscles: "Biceps", SecondaryMuscles: "Forearms", Type: "Isolation", Focus: "Upper"},
 	}
 
-	routine, err := BuildRoutineRecommendation(exercises, "strength", 3, "")
+	routine, err := BuildRoutineRecommendation(exercises, "strength", "")
 	if err != nil {
 		t.Fatalf("BuildRoutineRecommendation() error = %v", err)
 	}
 
-	if len(routine.Exercises) != len(exercises) {
-		t.Fatalf("len(routine.Exercises) = %d, want %d", len(routine.Exercises), len(exercises))
+	if len(routine.Exercises) != 5 {
+		t.Fatalf("len(routine.Exercises) = %d, want 5", len(routine.Exercises))
 	}
 	seen := make(map[string]bool)
 	for _, exercise := range routine.Exercises {
@@ -129,12 +135,12 @@ func TestBuildRoutineRecommendationAlternatesCompoundAndIsolation(t *testing.T) 
 		{ID: "isolation-3", Exercise: "Tricep Extension", PrimaryMuscles: "Triceps", Type: "Isolation", Focus: "Tricep"},
 	}
 
-	routine, err := BuildRoutineRecommendation(exercises, "strength", 3, "")
+	routine, err := BuildRoutineRecommendation(exercises, "strength", "")
 	if err != nil {
 		t.Fatalf("BuildRoutineRecommendation() error = %v", err)
 	}
 
-	expectedTypes := []string{"Compound", "Isolation", "Compound", "Isolation", "Compound", "Isolation"}
+	expectedTypes := []string{"Compound", "Isolation", "Compound", "Isolation", "Compound"}
 	if len(routine.Exercises) != len(expectedTypes) {
 		t.Fatalf("len(routine.Exercises) = %d, want %d", len(routine.Exercises), len(expectedTypes))
 	}
@@ -154,7 +160,7 @@ func TestBuildRoutineRecommendationAvoidsCompoundPrimaryMuscles(t *testing.T) {
 		{ID: "isolation-rest", Exercise: "Bicep Curl", PrimaryMuscles: "Biceps", Type: "Isolation", Focus: "Bicep"},
 	}
 
-	routine, err := BuildRoutineRecommendation(exercises, "strength", 3, "")
+	routine, err := BuildRoutineRecommendation(exercises, "strength", "")
 	if err != nil {
 		t.Fatalf("BuildRoutineRecommendation() error = %v", err)
 	}
@@ -170,14 +176,14 @@ func TestBuildRoutineRecommendationReturnsShorterResultWhenOnlyOneTypeIsAvailabl
 		{ID: "compound-2", Exercise: "Bench Press", PrimaryMuscles: "Chest, Triceps", Type: "Compound", Focus: "Chest"},
 	}
 
-	routine, err := BuildRoutineRecommendation(exercises, "strength", 3, "")
+	routine, err := BuildRoutineRecommendation(exercises, "strength", "")
 	if err != nil {
 		t.Fatalf("BuildRoutineRecommendation() error = %v", err)
 	}
 	if len(routine.Exercises) != len(exercises) {
 		t.Fatalf("len(routine.Exercises) = %d, want %d", len(routine.Exercises), len(exercises))
 	}
-	if routine.Description != "3-day strength routine with 2 unique exercises" {
+	if routine.Description != "1-day strength routine with 2 unique exercises" {
 		t.Fatalf("description = %q, want shortened-routine description", routine.Description)
 	}
 	for _, exercise := range routine.Exercises {
@@ -222,7 +228,7 @@ func TestBuildRoutineRecommendationUsesMappedIsolationFocus(t *testing.T) {
 				{ID: "same-focus-isolation", Exercise: testCase.focus + " Isolation", PrimaryMuscles: testCase.focus, Type: "Isolation", Focus: testCase.focus},
 			}
 
-			routine, err := BuildRoutineRecommendation(exercises, "strength", 3, testCase.focus)
+			routine, err := BuildRoutineRecommendation(exercises, "strength", testCase.focus)
 			if err != nil {
 				t.Fatalf("BuildRoutineRecommendation() error = %v", err)
 			}
@@ -239,7 +245,7 @@ func TestBuildRoutineRecommendationTreatsShoulderFocusAsLegAccessory(t *testing.
 		{ID: "shoulders-isolation", Exercise: "Lateral Raise", PrimaryMuscles: "Shoulders", Type: "Isolation", Focus: "Shoulders"},
 	}
 
-	routine, err := BuildRoutineRecommendation(exercises, "strength", 3, "Leg")
+	routine, err := BuildRoutineRecommendation(exercises, "strength", "Leg")
 	if err != nil {
 		t.Fatalf("BuildRoutineRecommendation() error = %v", err)
 	}
@@ -254,7 +260,7 @@ func TestBuildRoutineRecommendationFallsBackWhenMappedAccessoryIsUnavailable(t *
 		{ID: "bicep-isolation", Exercise: "Bicep Curl", PrimaryMuscles: "Biceps", Type: "Isolation", Focus: "Bicep"},
 	}
 
-	routine, err := BuildRoutineRecommendation(exercises, "strength", 3, "Chest")
+	routine, err := BuildRoutineRecommendation(exercises, "strength", "Chest")
 	if err != nil {
 		t.Fatalf("BuildRoutineRecommendation() error = %v", err)
 	}
@@ -265,6 +271,51 @@ func TestBuildRoutineRecommendationFallsBackWhenMappedAccessoryIsUnavailable(t *
 		if exercise.Type != "Compound" || exercise.Focus != "Chest" {
 			t.Fatalf("fallback exercise = %+v, want a chest compound", exercise)
 		}
+	}
+}
+
+func TestRecommendUsesOneDayRequestAndOmitsWeight(t *testing.T) {
+	store := &alternativeExerciseStore{exercises: []models.Exercise{
+		{ID: "001", Exercise: "Barbell Squat", PrimaryMuscles: "Quads, Glutes", Type: "Compound", Focus: "Leg"},
+		{ID: "002", Exercise: "Leg Extension", PrimaryMuscles: "Quads", Type: "Isolation", Focus: "Leg"},
+	}}
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(
+		http.MethodPost,
+		"/recommendations/routine",
+		strings.NewReader(`{"goal":"strength"}`),
+	)
+	context.Request.Header.Set("Content-Type", "application/json")
+
+	(&RoutineHandler{ExerciseStore: store}).Recommend(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body = %s", recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+
+	var response struct {
+		Days      int `json:"days"`
+		Exercises []struct {
+			Day  int `json:"day"`
+			Sets []struct {
+				Reps int `json:"reps"`
+				Rest int `json:"rest"`
+			} `json:"sets"`
+		} `json:"exercises"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode recommendation response: %v", err)
+	}
+	if response.Days != 1 {
+		t.Fatalf("response days = %d, want 1", response.Days)
+	}
+	if len(response.Exercises) == 0 || response.Exercises[0].Day != 1 {
+		t.Fatalf("response exercises = %+v, want exercises assigned to day 1", response.Exercises)
+	}
+	if strings.Contains(recorder.Body.String(), `"weight"`) {
+		t.Fatalf("response must not expose set weight, got %s", recorder.Body.String())
 	}
 }
 
@@ -365,7 +416,7 @@ func (s *alternativeExerciseStore) BackendName() string {
 }
 
 func TestBuildRoutineRecommendationRejectsInvalidGoal(t *testing.T) {
-	_, err := BuildRoutineRecommendation([]models.Exercise{{ID: "001", Exercise: "Squat", PrimaryMuscles: "Quads", Type: "Compound", Focus: "Leg"}}, "cardio", 3, "")
+	_, err := BuildRoutineRecommendation([]models.Exercise{{ID: "001", Exercise: "Squat", PrimaryMuscles: "Quads", Type: "Compound", Focus: "Leg"}}, "cardio", "")
 	if err == nil {
 		t.Fatal("expected error for invalid goal")
 	}

@@ -189,7 +189,7 @@ paths:
   /recommendations/routine:
     post:
       tags: [Recommendations]
-      summary: Generate a routine recommendation
+      summary: Generate a one-day routine recommendation
       security: [{bearerAuth: []}]
       requestBody:
         required: true
@@ -286,9 +286,10 @@ components:
     RoutineExercise: {type: object, properties: {exercise_id: {type: string}, sets: {type: array, items: {$ref: '#/components/schemas/Set'}}, order: {type: integer}}}
     RoutineInput: {type: object, required: [name], properties: {name: {type: string}, description: {type: string}, exercises: {type: array, items: {$ref: '#/components/schemas/RoutineExercise'}}}}
     Routine: {allOf: [{$ref: '#/components/schemas/RoutineInput'}, {type: object, properties: {id: {type: string}, user_id: {type: string, readOnly: true}, created_at: {type: string, format: date-time}, updated_at: {type: string, format: date-time}}}]}
-    RecommendationRequest: {type: object, required: [goal, days], properties: {goal: {type: string, enum: [strength, powerlifting]}, days: {type: integer, enum: [3, 4]}, focus: {type: string}, exerciseType: {type: string}, experience: {type: string}, avoidMuscles: {type: array, items: {type: string}}}}
-    RecommendationExercise: {type: object, properties: {id: {type: string}, name: {type: string}, primary_muscles: {type: string}, secondary_muscles: {type: string}, type: {type: string}, focus: {type: string}, sets: {type: array, items: {$ref: '#/components/schemas/Set'}}, order: {type: integer}, day: {type: integer}}}
-    RecommendationRoutine: {type: object, properties: {id: {type: string}, goal: {type: string}, days: {type: integer}, name: {type: string}, description: {type: string}, exercises: {type: array, items: {$ref: '#/components/schemas/RecommendationExercise'}}, created_at: {type: string, format: date-time}, updated_at: {type: string, format: date-time}}}
+    RecommendationRequest: {type: object, required: [goal], properties: {goal: {type: string, enum: [strength, powerlifting]}, focus: {type: string}, exerciseType: {type: string}, avoidMuscles: {type: array, items: {type: string}}}}
+    RecommendationSet: {type: object, properties: {reps: {type: integer}, rest: {type: integer}}}
+    RecommendationExercise: {type: object, properties: {id: {type: string}, name: {type: string}, primary_muscles: {type: string}, secondary_muscles: {type: string}, type: {type: string}, focus: {type: string}, sets: {type: array, items: {$ref: '#/components/schemas/RecommendationSet'}}, order: {type: integer}, day: {type: integer, enum: [1]}}}
+    RecommendationRoutine: {type: object, properties: {id: {type: string}, goal: {type: string}, days: {type: integer, enum: [1]}, name: {type: string}, description: {type: string}, exercises: {type: array, items: {$ref: '#/components/schemas/RecommendationExercise'}}, created_at: {type: string, format: date-time}, updated_at: {type: string, format: date-time}}}
     Permission: {type: object, required: [subject, object, action], properties: {subject: {type: string}, object: {type: string}, action: {type: string, enum: [read, create, update, delete]}}}
     GroupingPolicy: {type: object, required: [user, role], properties: {user: {type: string}, role: {type: string}}}
     MessageResponse: {type: object, properties: {message: {type: string}}}

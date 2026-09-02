@@ -17,23 +17,26 @@ import (
 
 type RecommendationRequest struct {
 	Goal         string   `json:"goal" binding:"required"`
-	Days         int      `json:"days" binding:"required"`
 	Focus        string   `json:"focus"`
 	ExerciseType string   `json:"exerciseType"`
-	Experience   string   `json:"experience"`
 	AvoidMuscles []string `json:"avoidMuscles"`
 }
 
+type RecommendationSet struct {
+	Reps int `json:"reps"`
+	Rest int `json:"rest"`
+}
+
 type RecommendationExercise struct {
-	ID               string       `json:"id"`
-	Name             string       `json:"name"`
-	PrimaryMuscles   string       `json:"primary_muscles"`
-	SecondaryMuscles string       `json:"secondary_muscles,omitempty"`
-	Type             string       `json:"type"`
-	Focus            string       `json:"focus,omitempty"`
-	Sets             []models.Set `json:"sets"`
-	Order            int          `json:"order"`
-	Day              int          `json:"day"`
+	ID               string              `json:"id"`
+	Name             string              `json:"name"`
+	PrimaryMuscles   string              `json:"primary_muscles"`
+	SecondaryMuscles string              `json:"secondary_muscles,omitempty"`
+	Type             string              `json:"type"`
+	Focus            string              `json:"focus,omitempty"`
+	Sets             []RecommendationSet `json:"sets"`
+	Order            int                 `json:"order"`
+	Day              int                 `json:"day"`
 }
 
 type RecommendationRoutine struct {
@@ -47,9 +50,8 @@ type RecommendationRoutine struct {
 	UpdatedAt   time.Time                `json:"updated_at"`
 }
 
-// generateSetsForExercise creates concrete Set data based on goal and exercise type.
-// Returns a slice of Set objects with concrete reps, weight, and rest values.
-func generateSetsForExercise(exercise models.Exercise, goal string) []models.Set {
+// generateSetsForExercise creates recommendation set data based on goal and exercise type.
+func generateSetsForExercise(exercise models.Exercise, goal string) []RecommendationSet {
 	isCompound := strings.Contains(strings.ToLower(exercise.Type), "compound")
 
 	var numSets, reps, restSeconds int
@@ -74,27 +76,24 @@ func generateSetsForExercise(exercise models.Exercise, goal string) []models.Set
 		}
 	}
 
-	sets := make([]models.Set, numSets)
+	sets := make([]RecommendationSet, numSets)
 	for i := 0; i < numSets; i++ {
-		sets[i] = models.Set{
-			Reps:   reps,
-			Weight: 0, // Default: no weight history available
-			Rest:   restSeconds,
+		sets[i] = RecommendationSet{
+			Reps: reps,
+			Rest: restSeconds,
 		}
 	}
 	return sets
 }
 
 // BuildRoutineRecommendation creates a response with each recommended exercise and its prescription
-// based on the provided exercises, goal, and number of training days.
-// Ensures minimum 5 exercises per training day.
-func BuildRoutineRecommendation(exercises []models.Exercise, goal string, days int, focus string) (*RecommendationRoutine, error) {
+// based on the provided exercises and goal. Ensures a minimum of 5 exercises.
+func BuildRoutineRecommendation(exercises []models.Exercise, goal, focus string) (*RecommendationRoutine, error) {
+	const days = 1
+
 	goal = strings.ToLower(strings.TrimSpace(goal))
 	if goal != "strength" && goal != "powerlifting" {
 		return nil, errors.New("goal must be strength or powerlifting")
-	}
-	if days != 3 && days != 4 {
-		return nil, errors.New("days must be 3 or 4")
 	}
 	if len(exercises) == 0 {
 		return nil, errors.New("no exercises available to build a routine")
@@ -415,7 +414,7 @@ func (h *RoutineHandler) Recommend(c *gin.Context) {
 	}
 
 	exercises = filterExercisesForRequest(exercises, req)
-	routine, err := BuildRoutineRecommendation(exercises, req.Goal, req.Days, req.Focus)
+	routine, err := BuildRoutineRecommendation(exercises, req.Goal, req.Focus)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
