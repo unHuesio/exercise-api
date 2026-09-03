@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"testing"
 
 	"gym-api/m/models"
@@ -12,10 +13,15 @@ import (
 )
 
 func TestNewMongoExerciseStoreUsesCanonicalCollection(t *testing.T) {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
-		t.Fatalf("mongo.NewClient() error = %v", err)
+		t.Fatalf("mongo.Connect() error = %v", err)
 	}
+	t.Cleanup(func() {
+		if err := client.Disconnect(context.Background()); err != nil {
+			t.Errorf("client.Disconnect() error = %v", err)
+		}
+	})
 
 	store, err := NewMongoExerciseStore(client, "gym-app")
 	if err != nil {
