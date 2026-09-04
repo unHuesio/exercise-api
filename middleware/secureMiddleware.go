@@ -4,7 +4,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SecureHeadersMiddleware() gin.HandlerFunc {
+// SecureHeadersMiddleware sets baseline security headers and CORS handling.
+// allowedOrigins is an explicit allowlist of origins permitted to make
+// credentialed cross-origin requests; reflecting an arbitrary Origin header
+// with Access-Control-Allow-Credentials would let any site read authenticated
+// responses, so origins outside the allowlist never receive CORS headers.
+func SecureHeadersMiddleware(allowedOrigins []string) gin.HandlerFunc {
+	allowed := make(map[string]bool, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		allowed[origin] = true
+	}
+
 	return func(c *gin.Context) {
 		c.Header("X-Frame-Options", "DENY")
 		cspPolicy := "default-src 'self'; connect-src *; font-src *; " +
@@ -24,7 +34,7 @@ func SecureHeadersMiddleware() gin.HandlerFunc {
 			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 		}
 
-		if origin := c.GetHeader("Origin"); origin != "" {
+		if origin := c.GetHeader("Origin"); origin != "" && allowed[origin] {
 			c.Header("Access-Control-Allow-Origin", origin)
 			c.Header("Access-Control-Allow-Credentials", "true")
 		}

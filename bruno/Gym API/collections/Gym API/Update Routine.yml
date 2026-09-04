@@ -8,7 +8,7 @@ http:
   url: http://localhost:8080/routines/6a987644d7c7e337e5d3860f
   headers:
     - name: Authorization
-      value: Bearer ***REMOVED-TOKEN***
+      value: Bearer {{auth_token}}
   body:
     type: json
     data: |-

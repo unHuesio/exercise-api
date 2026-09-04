@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"gym-api/m/config"
 	"gym-api/m/db"
@@ -46,12 +47,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Cache exercise reads for a short TTL; exercises change infrequently, and
+	// List/GetByID are called on nearly every request (including recommendations).
+	cachedExerciseStore := storage.NewCachedExerciseStore(exerciseStore, 30*time.Second)
 
 	// Initialize handlers
-	exerciseHandler := &handlers.ExerciseHandler{Store: exerciseStore}
+	exerciseHandler := &handlers.ExerciseHandler{Store: cachedExerciseStore}
 	permissionHandler := &handlers.PermissionHandler{DB: client, Enforcer: enforcer}
 	authenticationHandler := &handlers.AuthenticationHandler{DB: client, Enforcer: enforcer}
-	routineHandler := &handlers.RoutineHandler{DB: client, ExerciseStore: exerciseStore}
+	routineHandler := &handlers.RoutineHandler{DB: client, ExerciseStore: cachedExerciseStore}
 
 	// Rate limiter setup
 	authRate, err := limiterlib.NewRateFromFormatted("10-M")
@@ -72,7 +76,7 @@ func main() {
 	r := gin.Default()
 
 	// Apply API key middleware to all routes
-	r.Use(middleware.SecureHeadersMiddleware())
+	r.Use(middleware.SecureHeadersMiddleware(cfg.AllowedOrigins))
 	r.Use(limit.MaxAllowed(200))
 
 	// Public auth routes: keep stricter than general API read traffic

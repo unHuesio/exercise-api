@@ -1,0 +1,8 @@
+name: gym-api
+variables:
+  - name: id_token
+    value: ***REMOVED-TOKEN***
+    description: ""
+  - name: auth_token
+    value: ***REMOVED-TOKEN***
+    description: ""

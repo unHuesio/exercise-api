@@ -8,7 +8,7 @@ http:
   url: http://localhost:8080/exercises/6a986de9a7002e71f501616d
   headers:
     - name: Authorization
-      value: Bearer  ***REMOVED-TOKEN***
+      value: Bearer {{auth_token}}
   body:
     type: json
     data: ""

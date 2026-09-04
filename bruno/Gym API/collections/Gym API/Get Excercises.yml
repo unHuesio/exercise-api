@@ -8,7 +8,7 @@ http:
   url: http://localhost:8080/exercises
   headers:
     - name: Authorization
-      value: Bearer ***REMOVED-TOKEN***
+      value: Bearer {{auth_token}}
 
 settings:
   encodeUrl: true

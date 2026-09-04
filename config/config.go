@@ -2,7 +2,9 @@ package config
 
 import (
 	"log"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -15,6 +17,7 @@ type Config struct {
 	ExercisesFile   string
 	ExercisesBucket string
 	ExercisesObject string
+	AllowedOrigins  []string
 }
 
 func Load() *Config {
@@ -24,6 +27,11 @@ func Load() *Config {
 	jwtSecret, jwtExists := os.LookupEnv("JWT_SECRET")
 	if !jwtExists {
 		log.Fatal("JWT_SECRET environment variable not set")
+	}
+	jwtSecret = strings.TrimSpace(jwtSecret)
+	// An empty or too-short secret would let anyone forge valid HS256 JWTs.
+	if len(jwtSecret) < 8 {
+		log.Fatal("JWT_SECRET must be set to a non-empty value of at least 8 characters")
 	}
 	jwtKey := []byte(jwtSecret)
 	if !exists {
@@ -57,13 +65,36 @@ func Load() *Config {
 		ExercisesFile:   exercisesFile,
 		ExercisesBucket: exercisesBucket,
 		ExercisesObject: exercisesObject,
+		AllowedOrigins:  parseAllowedOrigins(os.Getenv("ALLOWED_ORIGINS")),
 	}
 }
 
-// maskURI hides sensitive info for logging
-func maskURI(uri string) string {
-	if len(uri) > 30 {
-		return uri[:10] + "..." + uri[len(uri)-10:]
+// parseAllowedOrigins parses a comma-separated list of origins allowed to make
+// credentialed cross-origin requests. An empty/unset value disables reflecting
+// any Origin, so no credentialed cross-origin access is granted by default.
+func parseAllowedOrigins(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
 	}
-	return uri
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	return origins
+}
+
+// maskURI hides sensitive info (e.g. embedded credentials) for logging.
+func maskURI(uri string) string {
+	parsed, err := url.Parse(uri)
+	if err != nil || parsed.Host == "" {
+		// Not a parseable URI (or no host); avoid logging it verbatim since it
+		// may still contain a password, regardless of its length.
+		return "****"
+	}
+	parsed.User = nil
+	return parsed.String()
 }

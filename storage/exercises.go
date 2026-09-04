@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -101,9 +102,29 @@ func NewMongoExerciseStore(client *mongo.Client, databaseName string) (*MongoExe
 		databaseName = "gym-app"
 	}
 	db := client.Database(databaseName)
+	collection := db.Collection("excercises")
+	ensureExerciseIndexes(collection)
 	return &MongoExerciseStore{
-		collection: db.Collection("excercises"),
+		collection: collection,
 	}, nil
+}
+
+// ensureExerciseIndexes creates indexes for the fields List() filters on, so
+// lookups avoid a full collection scan as the dataset grows. Index creation
+// is best-effort: a failure here (e.g. insufficient permissions) should not
+// prevent the store from starting, so errors are only logged.
+func ensureExerciseIndexes(collection *mongo.Collection) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	fields := []string{"Focus", "Type", "PrimaryMuscles", "SecondaryMuscles"}
+	indexModels := make([]mongo.IndexModel, 0, len(fields))
+	for _, field := range fields {
+		indexModels = append(indexModels, mongo.IndexModel{Keys: bson.D{{Key: field, Value: 1}}})
+	}
+	if _, err := collection.Indexes().CreateMany(ctx, indexModels); err != nil {
+		log.Printf("warning: failed to create exercise indexes: %v", err)
+	}
 }
 
 type MongoExerciseStore struct {

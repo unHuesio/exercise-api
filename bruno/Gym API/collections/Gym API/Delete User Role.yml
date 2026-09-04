@@ -8,7 +8,7 @@ http:
   url: http://localhost:8080/permissions/groups
   headers:
     - name: Authorization
-      value: Bearer ***REMOVED-TOKEN***
+      value: Bearer {{auth_token}}
   body:
     type: json
     data: |-
