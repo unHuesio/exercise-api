@@ -97,6 +97,9 @@ paths:
         - {$ref: '#/components/parameters/Focus'}
         - {$ref: '#/components/parameters/ExerciseType'}
         - {$ref: '#/components/parameters/Muscle'}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      description: Focus and type filters are case-insensitive exact matches. Results are paginated; `limit` defaults to 50 and is capped at 100.
       responses:
         '200': {description: Exercises, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Exercise'}}}}}
         '401': {$ref: '#/components/responses/Unauthorized'}
@@ -152,6 +155,10 @@ paths:
       tags: [Routines]
       summary: List routines owned by the authenticated user
       security: [{bearerAuth: []}]
+      parameters:
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      description: Results are paginated; `limit` defaults to 50 and is capped at 100.
       responses:
         '200': {description: Routines, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Routine'}}}}}
         '401': {$ref: '#/components/responses/Unauthorized'}
@@ -264,6 +271,8 @@ components:
     Focus: {name: focus, in: query, schema: {type: string}}
     ExerciseType: {name: type, in: query, schema: {type: string}}
     Muscle: {name: muscle, in: query, schema: {type: string}}
+    Page: {name: page, in: query, description: One-based page number. Defaults to 1., schema: {type: integer, minimum: 1, default: 1}}
+    Limit: {name: limit, in: query, description: Maximum results per page. Defaults to 50 and is capped at 100., schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
   requestBodies:
     Exercise: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Exercise'}}}}
     Routine: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/RoutineInput'}}}}

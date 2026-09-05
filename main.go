@@ -15,10 +15,13 @@ import (
 	limit "github.com/aviddiviner/gin-limit"
 	"github.com/casbin/casbin/v2"
 	mongodbadapter "github.com/casbin/mongodb-adapter/v4"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gin-gonic/gin"
 	limiterlib "github.com/ulule/limiter/v3"
 	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	memory "github.com/ulule/limiter/v3/drivers/store/memory"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func main() {
@@ -54,7 +57,26 @@ func main() {
 	// Initialize handlers
 	exerciseHandler := &handlers.ExerciseHandler{Store: cachedExerciseStore}
 	permissionHandler := &handlers.PermissionHandler{DB: client, Enforcer: enforcer}
-	authenticationHandler := &handlers.AuthenticationHandler{DB: client, Enforcer: enforcer}
+	var googleVerifier *oidc.IDTokenVerifier
+	if cfg.GoogleClientID != "" {
+		googleVerifier, err = handlers.NewGoogleTokenVerifier(context.Background(), cfg.GoogleClientID, cfg.GoogleIssuer)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	authenticationHandler := &handlers.AuthenticationHandler{
+		DB: client, Enforcer: enforcer, GoogleVerifier: googleVerifier,
+		GoogleClientID: cfg.GoogleClientID, GoogleIssuer: cfg.GoogleIssuer,
+	}
+	routineIndexes, err := client.Database("gym-app").Collection("routines").Indexes().CreateMany(
+		context.Background(),
+		[]mongo.IndexModel{{Keys: bson.D{{Key: "user_id", Value: 1}}}},
+	)
+	if err != nil {
+		log.Printf("warning: failed to create routine indexes: %v", err)
+	} else {
+		log.Printf("routine indexes ensured: %v", routineIndexes)
+	}
 	routineHandler := &handlers.RoutineHandler{DB: client, ExerciseStore: cachedExerciseStore}
 
 	// Rate limiter setup

@@ -47,6 +47,24 @@ func TestExerciseDocumentUsesObjectID(t *testing.T) {
 	if storedID != id {
 		t.Fatalf("_id = %s, want %s", storedID.Hex(), id.Hex())
 	}
+	if document["FocusNormalized"] != "" || document["TypeNormalized"] != "" {
+		t.Fatalf("normalized empty fields = %#v, want empty strings", document)
+	}
+}
+
+func TestExerciseDocumentNormalizesIndexedFilters(t *testing.T) {
+	document := exerciseDocument(models.Exercise{
+		Exercise: "Bench Press",
+		Type:     "  Compound ",
+		Focus:    " Upper ",
+	}, primitive.NewObjectID())
+
+	if got, want := document["TypeNormalized"], "compound"; got != want {
+		t.Fatalf("TypeNormalized = %q, want %q", got, want)
+	}
+	if got, want := document["FocusNormalized"], "upper"; got != want {
+		t.Fatalf("FocusNormalized = %q, want %q", got, want)
+	}
 }
 
 func TestExerciseIDFilterMatchesObjectIDAndLegacyStringID(t *testing.T) {

@@ -18,6 +18,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var ErrNotFound = errors.New("exercise not found")
@@ -30,6 +31,15 @@ type ExerciseStore interface {
 	Delete(ctx context.Context, id string) error
 	Health(ctx context.Context) error
 	BackendName() string
+}
+
+type ExercisePage struct {
+	Items []models.Exercise
+	Total int64
+}
+
+type ExercisePager interface {
+	ListPage(ctx context.Context, filters map[string]string, page, limit int64) (ExercisePage, error)
 }
 
 type FileExerciseStore struct {
@@ -117,13 +127,28 @@ func ensureExerciseIndexes(collection *mongo.Collection) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	fields := []string{"Focus", "Type", "PrimaryMuscles", "SecondaryMuscles"}
+	fields := []string{"FocusNormalized", "TypeNormalized", "PrimaryMuscles", "SecondaryMuscles"}
 	indexModels := make([]mongo.IndexModel, 0, len(fields))
 	for _, field := range fields {
 		indexModels = append(indexModels, mongo.IndexModel{Keys: bson.D{{Key: field, Value: 1}}})
 	}
 	if _, err := collection.Indexes().CreateMany(ctx, indexModels); err != nil {
 		log.Printf("warning: failed to create exercise indexes: %v", err)
+	}
+	_, err := collection.UpdateMany(ctx,
+		bson.M{"$or": []bson.M{
+			{"FocusNormalized": bson.M{"$exists": false}},
+			{"TypeNormalized": bson.M{"$exists": false}},
+		}},
+		mongo.Pipeline{
+			{{Key: "$set", Value: bson.M{
+				"FocusNormalized": bson.M{"$toLower": bson.M{"$trim": bson.M{"input": bson.M{"$ifNull": []any{"$Focus", ""}}}}},
+				"TypeNormalized":  bson.M{"$toLower": bson.M{"$trim": bson.M{"input": bson.M{"$ifNull": []any{"$Type", ""}}}}},
+			}}},
+		},
+	)
+	if err != nil {
+		log.Printf("warning: failed to backfill exercise search fields: %v", err)
 	}
 }
 
@@ -146,6 +171,8 @@ func exerciseDocument(exercise models.Exercise, id primitive.ObjectID) bson.M {
 		"SecondaryMuscles": exercise.SecondaryMuscles,
 		"Type":             exercise.Type,
 		"Focus":            exercise.Focus,
+		"TypeNormalized":   strings.ToLower(strings.TrimSpace(exercise.Type)),
+		"FocusNormalized":  strings.ToLower(strings.TrimSpace(exercise.Focus)),
 	}
 }
 
@@ -156,17 +183,27 @@ func exerciseUpdateDocument(exercise models.Exercise) bson.M {
 		"SecondaryMuscles": exercise.SecondaryMuscles,
 		"Type":             exercise.Type,
 		"Focus":            exercise.Focus,
+		"TypeNormalized":   strings.ToLower(strings.TrimSpace(exercise.Type)),
+		"FocusNormalized":  strings.ToLower(strings.TrimSpace(exercise.Focus)),
 	}
 }
 
 func (s *MongoExerciseStore) List(ctx context.Context, filters map[string]string) ([]models.Exercise, error) {
+	page, err := s.ListPage(ctx, filters, 1, 1000)
+	if err != nil {
+		return nil, err
+	}
+	return page.Items, nil
+}
+
+func (s *MongoExerciseStore) ListPage(ctx context.Context, filters map[string]string, page, limit int64) (ExercisePage, error) {
 	filter := bson.M{}
 
 	if focus := strings.TrimSpace(filters["focus"]); focus != "" {
-		filter["Focus"] = bson.M{"$regex": primitive.Regex{Pattern: focus, Options: "i"}}
+		filter["FocusNormalized"] = strings.ToLower(focus)
 	}
 	if exerciseType := strings.TrimSpace(filters["type"]); exerciseType != "" {
-		filter["Type"] = bson.M{"$regex": primitive.Regex{Pattern: exerciseType, Options: "i"}}
+		filter["TypeNormalized"] = strings.ToLower(exerciseType)
 	}
 	if muscle := strings.TrimSpace(filters["muscle"]); muscle != "" {
 		filter["$or"] = []bson.M{
@@ -177,9 +214,16 @@ func (s *MongoExerciseStore) List(ctx context.Context, filters map[string]string
 		}
 	}
 
-	cursor, err := s.collection.Find(ctx, filter)
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 100
+	}
+	cursor, err := s.collection.Find(ctx, filter, options.Find().
+		SetSkip((page-1)*limit).SetLimit(limit))
 	if err != nil {
-		return nil, err
+		return ExercisePage{}, err
 	}
 	defer func() {
 		_ = cursor.Close(ctx)
@@ -187,9 +231,9 @@ func (s *MongoExerciseStore) List(ctx context.Context, filters map[string]string
 
 	var exercises []models.Exercise
 	if err := cursor.All(ctx, &exercises); err != nil {
-		return nil, err
+		return ExercisePage{}, err
 	}
-	return exercises, nil
+	return ExercisePage{Items: exercises}, nil
 }
 
 func (s *MongoExerciseStore) GetByID(ctx context.Context, id string) (models.Exercise, error) {
@@ -424,6 +468,9 @@ type CachedExerciseStore struct {
 }
 
 func (s *CachedExerciseStore) List(ctx context.Context, filters map[string]string) ([]models.Exercise, error) {
+	if len(filters) > 0 {
+		return s.store.List(ctx, filters)
+	}
 	s.mu.RLock()
 	if !s.expiresAt.IsZero() && time.Now().Before(s.expiresAt) {
 		items := append([]models.Exercise(nil), s.cache...)
@@ -442,6 +489,44 @@ func (s *CachedExerciseStore) List(ctx context.Context, filters map[string]strin
 	s.expiresAt = time.Now().Add(s.ttl)
 	s.mu.Unlock()
 	return items, nil
+}
+
+func (s *CachedExerciseStore) ListPage(ctx context.Context, filters map[string]string, page, limit int64) (ExercisePage, error) {
+	if len(filters) == 0 {
+		s.mu.RLock()
+		if !s.expiresAt.IsZero() && time.Now().Before(s.expiresAt) {
+			items := append([]models.Exercise(nil), s.cache...)
+			s.mu.RUnlock()
+			return pageExercises(items, page, limit), nil
+		}
+		s.mu.RUnlock()
+	}
+	if pager, ok := s.store.(ExercisePager); ok {
+		return pager.ListPage(ctx, filters, page, limit)
+	}
+	items, err := s.store.List(ctx, filters)
+	if err != nil {
+		return ExercisePage{}, err
+	}
+	return pageExercises(items, page, limit), nil
+}
+
+func pageExercises(items []models.Exercise, page, limit int64) ExercisePage {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 100
+	}
+	start := (page - 1) * limit
+	if start >= int64(len(items)) {
+		return ExercisePage{Items: []models.Exercise{}, Total: int64(len(items))}
+	}
+	end := start + limit
+	if end > int64(len(items)) {
+		end = int64(len(items))
+	}
+	return ExercisePage{Items: items[start:end], Total: int64(len(items))}
 }
 
 func (s *CachedExerciseStore) GetByID(ctx context.Context, id string) (models.Exercise, error) {

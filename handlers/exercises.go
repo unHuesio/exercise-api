@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"gym-api/m/models"
 	"gym-api/m/storage"
@@ -20,13 +21,37 @@ func (h *ExerciseHandler) GetAll(c *gin.Context) {
 		"muscle": c.Query("muscle"),
 	}
 
-	exercises, err := h.Store.List(c.Request.Context(), filter)
+	page, limit := pagination(c)
+	var exercises []models.Exercise
+	var err error
+	if pager, ok := h.Store.(storage.ExercisePager); ok {
+		result, pageErr := pager.ListPage(c.Request.Context(), filter, page, limit)
+		exercises = result.Items
+		err = pageErr
+	} else {
+		exercises, err = h.Store.List(c.Request.Context(), filter)
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, exercises)
+}
+
+func pagination(c *gin.Context) (int64, int64) {
+	page, _ := strconv.ParseInt(c.DefaultQuery("page", "1"), 10, 64)
+	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "50"), 10, 64)
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return page, limit
 }
 
 func (h *ExerciseHandler) GetByID(c *gin.Context) {

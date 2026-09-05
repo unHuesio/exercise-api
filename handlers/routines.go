@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type RoutineHandler struct {
@@ -33,7 +34,9 @@ func (h *RoutineHandler) GetAll(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cursor, err := collection.Find(ctx, routineOwnerFilter(userID))
+	page, limit := pagination(c)
+	cursor, err := collection.Find(ctx, routineOwnerFilter(userID), options.Find().
+		SetSkip((page-1)*limit).SetLimit(limit))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

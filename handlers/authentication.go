@@ -30,8 +30,11 @@ func isValidEmail(email string) bool {
 }
 
 type AuthenticationHandler struct {
-	DB       *mongo.Client
-	Enforcer *casbin.Enforcer
+	DB             *mongo.Client
+	Enforcer       *casbin.Enforcer
+	GoogleVerifier *oidc.IDTokenVerifier
+	GoogleClientID string
+	GoogleIssuer   string
 }
 
 type googleTokenRequest struct {
@@ -88,46 +91,17 @@ func buildUserProfileResponse(user models.User, roles []string) gin.H {
 }
 
 func (h *AuthenticationHandler) verifyGoogleToken(c *gin.Context, rawToken string) (GoogleTokenClaims, error) {
-	cfg := config.Load()
-	if cfg.GoogleClientID == "" {
+	if h.GoogleClientID == "" {
 		return GoogleTokenClaims{}, errors.New("google client ID is not configured")
 	}
-	if cfg.GoogleIssuer == "" {
+	if h.GoogleIssuer == "" {
 		return GoogleTokenClaims{}, errors.New("google issuer is not configured")
 	}
 
-	provider, err := oidc.NewProvider(c.Request.Context(), cfg.GoogleIssuer)
-	if err != nil {
-		return GoogleTokenClaims{}, err
+	if h.GoogleVerifier == nil {
+		return GoogleTokenClaims{}, errors.New("google token verifier is not configured")
 	}
-
-	verifier := provider.Verifier(&oidc.Config{ClientID: cfg.GoogleClientID})
-	idToken, err := verifier.Verify(c.Request.Context(), rawToken)
-	if err != nil {
-		return GoogleTokenClaims{}, err
-	}
-
-	claims := GoogleTokenClaims{}
-	if err := idToken.Claims(&claims); err != nil {
-		return GoogleTokenClaims{}, err
-	}
-	if claims.Subject == "" || claims.Email == "" {
-		return GoogleTokenClaims{}, errors.New("google token missing required claims")
-	}
-	if !claims.EmailVerified {
-		return GoogleTokenClaims{}, errors.New("google email not verified")
-	}
-	if claims.Issuer != cfg.GoogleIssuer {
-		return GoogleTokenClaims{}, errors.New("unexpected google issuer")
-	}
-	if claims.Audience != cfg.GoogleClientID {
-		return GoogleTokenClaims{}, errors.New("unexpected google audience")
-	}
-	if time.Now().Unix() >= claims.Expiry {
-		return GoogleTokenClaims{}, errors.New("google token expired")
-	}
-
-	return claims, nil
+	return VerifyGoogleIDTokenWithVerifier(c.Request.Context(), h.GoogleVerifier, rawToken, h.GoogleClientID, h.GoogleIssuer)
 }
 
 func (h *AuthenticationHandler) upsertGoogleUser(c *gin.Context, claims GoogleTokenClaims) (models.User, error) {

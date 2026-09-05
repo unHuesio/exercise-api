@@ -18,6 +18,38 @@ type GoogleTokenClaims struct {
 	Expiry        int64  `json:"exp"`
 }
 
+func NewGoogleTokenVerifier(ctx context.Context, clientID, issuer string) (*oidc.IDTokenVerifier, error) {
+	if clientID == "" {
+		return nil, errors.New("google client id is not configured")
+	}
+	if issuer == "" {
+		return nil, errors.New("google issuer is not configured")
+	}
+	provider, err := oidc.NewProvider(ctx, issuer)
+	if err != nil {
+		return nil, err
+	}
+	return provider.Verifier(&oidc.Config{ClientID: clientID}), nil
+}
+
+func VerifyGoogleIDTokenWithVerifier(ctx context.Context, verifier *oidc.IDTokenVerifier, rawToken, clientID, issuer string) (GoogleTokenClaims, error) {
+	if verifier == nil {
+		return GoogleTokenClaims{}, errors.New("google token verifier is not configured")
+	}
+	idToken, err := verifier.Verify(ctx, rawToken)
+	if err != nil {
+		return GoogleTokenClaims{}, err
+	}
+	claims := GoogleTokenClaims{}
+	if err := idToken.Claims(&claims); err != nil {
+		return GoogleTokenClaims{}, err
+	}
+	if err := ValidateGoogleTokenClaims(claims, clientID, issuer); err != nil {
+		return GoogleTokenClaims{}, err
+	}
+	return claims, nil
+}
+
 func ValidateGoogleTokenClaims(claims GoogleTokenClaims, expectedClientID string, expectedIssuer string) error {
 	if claims.Subject == "" {
 		return errors.New("google subject is required")
@@ -47,25 +79,9 @@ func ValidateGoogleTokenClaims(claims GoogleTokenClaims, expectedClientID string
 }
 
 func VerifyGoogleIDToken(ctx context.Context, rawToken string, clientID string, issuer string) (GoogleTokenClaims, error) {
-	provider, err := oidc.NewProvider(ctx, issuer)
+	verifier, err := NewGoogleTokenVerifier(ctx, clientID, issuer)
 	if err != nil {
 		return GoogleTokenClaims{}, err
 	}
-
-	verifier := provider.Verifier(&oidc.Config{ClientID: clientID})
-	idToken, err := verifier.Verify(ctx, rawToken)
-	if err != nil {
-		return GoogleTokenClaims{}, err
-	}
-
-	claims := GoogleTokenClaims{}
-	if err := idToken.Claims(&claims); err != nil {
-		return GoogleTokenClaims{}, err
-	}
-
-	if err := ValidateGoogleTokenClaims(claims, clientID, issuer); err != nil {
-		return GoogleTokenClaims{}, err
-	}
-
-	return claims, nil
+	return VerifyGoogleIDTokenWithVerifier(ctx, verifier, rawToken, clientID, issuer)
 }

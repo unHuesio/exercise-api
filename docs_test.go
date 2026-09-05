@@ -54,3 +54,17 @@ func TestOpenAPISpecCoversRegisteredRoutes(t *testing.T) {
 		}
 	}
 }
+
+func TestOpenAPISpecDocumentsPagination(t *testing.T) {
+	spec := string(openAPISpec)
+	for _, endpoint := range []string{"/exercises:", "/routines:"} {
+		if !strings.Contains(spec, endpoint) {
+			t.Fatalf("OpenAPI spec does not document %s", endpoint)
+		}
+	}
+	for _, parameter := range []string{"Page:", "Limit:", "defaults to 50", "capped at 100"} {
+		if !strings.Contains(spec, parameter) {
+			t.Errorf("OpenAPI spec does not document pagination detail %q", parameter)
+		}
+	}
+}

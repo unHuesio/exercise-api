@@ -103,3 +103,29 @@ func TestVerifyGoogleIDTokenAcceptsValidGoogleToken(t *testing.T) {
 		t.Fatalf("expected email user@example.com, got %s", claims.Email)
 	}
 }
+
+func TestVerifyGoogleIDTokenWithVerifierReusesProviderSetup(t *testing.T) {
+	server, privateKey, issuerURL := newTestGoogleOIDCProvider(t)
+	defer server.Close()
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"iss": issuerURL, "sub": "google-user-123", "aud": "client-123",
+		"email": "user@example.com", "email_verified": true,
+		"exp": time.Now().Add(time.Hour).Unix(),
+	})
+	token.Header["kid"] = "test-kid"
+	tokenString, err := token.SignedString(privateKey)
+	if err != nil {
+		t.Fatalf("sign token: %v", err)
+	}
+
+	verifier, err := NewGoogleTokenVerifier(context.Background(), "client-123", issuerURL)
+	if err != nil {
+		t.Fatalf("NewGoogleTokenVerifier() error: %v", err)
+	}
+	for range 2 {
+		if _, err := VerifyGoogleIDTokenWithVerifier(context.Background(), verifier, tokenString, "client-123", issuerURL); err != nil {
+			t.Fatalf("VerifyGoogleIDTokenWithVerifier() error: %v", err)
+		}
+	}
+}
