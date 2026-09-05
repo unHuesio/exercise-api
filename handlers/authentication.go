@@ -32,9 +32,9 @@ func isValidEmail(email string) bool {
 type AuthenticationHandler struct {
 	DB             *mongo.Client
 	Enforcer       *casbin.Enforcer
-	GoogleVerifier *oidc.IDTokenVerifier
-	GoogleClientID string
-	GoogleIssuer   string
+	GoogleVerifier  *oidc.IDTokenVerifier
+	GoogleClientIDs []string
+	GoogleIssuer    string
 }
 
 type googleTokenRequest struct {
@@ -91,7 +91,7 @@ func buildUserProfileResponse(user models.User, roles []string) gin.H {
 }
 
 func (h *AuthenticationHandler) verifyGoogleToken(c *gin.Context, rawToken string) (GoogleTokenClaims, error) {
-	if h.GoogleClientID == "" {
+	if len(h.GoogleClientIDs) == 0 {
 		return GoogleTokenClaims{}, errors.New("google client ID is not configured")
 	}
 	if h.GoogleIssuer == "" {
@@ -101,7 +101,7 @@ func (h *AuthenticationHandler) verifyGoogleToken(c *gin.Context, rawToken strin
 	if h.GoogleVerifier == nil {
 		return GoogleTokenClaims{}, errors.New("google token verifier is not configured")
 	}
-	return VerifyGoogleIDTokenWithVerifier(c.Request.Context(), h.GoogleVerifier, rawToken, h.GoogleClientID, h.GoogleIssuer)
+	return VerifyGoogleIDTokenWithVerifier(c.Request.Context(), h.GoogleVerifier, rawToken, h.GoogleClientIDs, h.GoogleIssuer)
 }
 
 func (h *AuthenticationHandler) upsertGoogleUser(c *gin.Context, claims GoogleTokenClaims) (models.User, error) {

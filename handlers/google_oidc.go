@@ -18,8 +18,12 @@ type GoogleTokenClaims struct {
 	Expiry        int64  `json:"exp"`
 }
 
-func NewGoogleTokenVerifier(ctx context.Context, clientID, issuer string) (*oidc.IDTokenVerifier, error) {
-	if clientID == "" {
+// NewGoogleTokenVerifier builds a verifier that accepts ID tokens issued for
+// any of the given clientIDs (e.g. separate web and iOS OAuth clients).
+// Audience checking is done manually in ValidateGoogleTokenClaims because
+// go-oidc's Config.ClientID only supports a single expected audience.
+func NewGoogleTokenVerifier(ctx context.Context, clientIDs []string, issuer string) (*oidc.IDTokenVerifier, error) {
+	if len(clientIDs) == 0 {
 		return nil, errors.New("google client id is not configured")
 	}
 	if issuer == "" {
@@ -29,10 +33,10 @@ func NewGoogleTokenVerifier(ctx context.Context, clientID, issuer string) (*oidc
 	if err != nil {
 		return nil, err
 	}
-	return provider.Verifier(&oidc.Config{ClientID: clientID}), nil
+	return provider.Verifier(&oidc.Config{SkipClientIDCheck: true}), nil
 }
 
-func VerifyGoogleIDTokenWithVerifier(ctx context.Context, verifier *oidc.IDTokenVerifier, rawToken, clientID, issuer string) (GoogleTokenClaims, error) {
+func VerifyGoogleIDTokenWithVerifier(ctx context.Context, verifier *oidc.IDTokenVerifier, rawToken string, clientIDs []string, issuer string) (GoogleTokenClaims, error) {
 	if verifier == nil {
 		return GoogleTokenClaims{}, errors.New("google token verifier is not configured")
 	}
@@ -44,13 +48,13 @@ func VerifyGoogleIDTokenWithVerifier(ctx context.Context, verifier *oidc.IDToken
 	if err := idToken.Claims(&claims); err != nil {
 		return GoogleTokenClaims{}, err
 	}
-	if err := ValidateGoogleTokenClaims(claims, clientID, issuer); err != nil {
+	if err := ValidateGoogleTokenClaims(claims, clientIDs, issuer); err != nil {
 		return GoogleTokenClaims{}, err
 	}
 	return claims, nil
 }
 
-func ValidateGoogleTokenClaims(claims GoogleTokenClaims, expectedClientID string, expectedIssuer string) error {
+func ValidateGoogleTokenClaims(claims GoogleTokenClaims, expectedClientIDs []string, expectedIssuer string) error {
 	if claims.Subject == "" {
 		return errors.New("google subject is required")
 	}
@@ -66,10 +70,17 @@ func ValidateGoogleTokenClaims(claims GoogleTokenClaims, expectedClientID string
 	if claims.Issuer != expectedIssuer {
 		return fmt.Errorf("unexpected google issuer: %s", claims.Issuer)
 	}
-	if expectedClientID == "" {
+	if len(expectedClientIDs) == 0 {
 		return errors.New("google client id is not configured")
 	}
-	if claims.Audience != expectedClientID {
+	audienceAllowed := false
+	for _, id := range expectedClientIDs {
+		if claims.Audience == id {
+			audienceAllowed = true
+			break
+		}
+	}
+	if !audienceAllowed {
 		return fmt.Errorf("unexpected google audience: %s", claims.Audience)
 	}
 	if time.Now().Unix() >= claims.Expiry {
@@ -78,10 +89,10 @@ func ValidateGoogleTokenClaims(claims GoogleTokenClaims, expectedClientID string
 	return nil
 }
 
-func VerifyGoogleIDToken(ctx context.Context, rawToken string, clientID string, issuer string) (GoogleTokenClaims, error) {
-	verifier, err := NewGoogleTokenVerifier(ctx, clientID, issuer)
+func VerifyGoogleIDToken(ctx context.Context, rawToken string, clientIDs []string, issuer string) (GoogleTokenClaims, error) {
+	verifier, err := NewGoogleTokenVerifier(ctx, clientIDs, issuer)
 	if err != nil {
 		return GoogleTokenClaims{}, err
 	}
-	return VerifyGoogleIDTokenWithVerifier(ctx, verifier, rawToken, clientID, issuer)
+	return VerifyGoogleIDTokenWithVerifier(ctx, verifier, rawToken, clientIDs, issuer)
 }

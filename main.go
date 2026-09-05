@@ -58,15 +58,15 @@ func main() {
 	exerciseHandler := &handlers.ExerciseHandler{Store: cachedExerciseStore}
 	permissionHandler := &handlers.PermissionHandler{DB: client, Enforcer: enforcer}
 	var googleVerifier *oidc.IDTokenVerifier
-	if cfg.GoogleClientID != "" {
-		googleVerifier, err = handlers.NewGoogleTokenVerifier(context.Background(), cfg.GoogleClientID, cfg.GoogleIssuer)
+	if len(cfg.GoogleClientIDs) > 0 {
+		googleVerifier, err = handlers.NewGoogleTokenVerifier(context.Background(), cfg.GoogleClientIDs, cfg.GoogleIssuer)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 	authenticationHandler := &handlers.AuthenticationHandler{
 		DB: client, Enforcer: enforcer, GoogleVerifier: googleVerifier,
-		GoogleClientID: cfg.GoogleClientID, GoogleIssuer: cfg.GoogleIssuer,
+		GoogleClientIDs: cfg.GoogleClientIDs, GoogleIssuer: cfg.GoogleIssuer,
 	}
 	routineIndexes, err := client.Database("gym-app").Collection("routines").Indexes().CreateMany(
 		context.Background(),

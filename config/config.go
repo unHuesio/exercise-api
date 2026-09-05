@@ -10,9 +10,13 @@ import (
 )
 
 type Config struct {
-	MongoURI        string
-	JWTKey          []byte
+	MongoURI string
+	JWTKey   []byte
+	// GoogleClientID is the primary (e.g. web) OAuth client ID, kept for
+	// backward compatibility. GoogleClientIDs holds every accepted audience
+	// (web, Android, iOS, ...) and should be used for token verification.
 	GoogleClientID  string
+	GoogleClientIDs []string
 	GoogleIssuer    string
 	ExercisesFile   string
 	ExercisesBucket string
@@ -39,6 +43,10 @@ func Load() *Config {
 	}
 
 	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+	// GOOGLE_CLIENT_ID and GOOGLE_IOS_CLIENT_ID may each hold a comma-separated
+	// list, allowing multiple OAuth clients (e.g. web + iOS) to log in.
+	googleClientIDs := parseCommaSeparated(googleClientID)
+	googleClientIDs = append(googleClientIDs, parseCommaSeparated(os.Getenv("GOOGLE_IOS_CLIENT_ID"))...)
 	googleIssuer := os.Getenv("GOOGLE_ISSUER")
 	if googleIssuer == "" {
 		googleIssuer = "https://accounts.google.com"
@@ -61,30 +69,31 @@ func Load() *Config {
 		MongoURI:        mongoURI,
 		JWTKey:          jwtKey,
 		GoogleClientID:  googleClientID,
+		GoogleClientIDs: googleClientIDs,
 		GoogleIssuer:    googleIssuer,
 		ExercisesFile:   exercisesFile,
 		ExercisesBucket: exercisesBucket,
 		ExercisesObject: exercisesObject,
-		AllowedOrigins:  parseAllowedOrigins(os.Getenv("ALLOWED_ORIGINS")),
+		AllowedOrigins:  parseCommaSeparated(os.Getenv("ALLOWED_ORIGINS")),
 	}
 }
 
-// parseAllowedOrigins parses a comma-separated list of origins allowed to make
-// credentialed cross-origin requests. An empty/unset value disables reflecting
-// any Origin, so no credentialed cross-origin access is granted by default.
-func parseAllowedOrigins(raw string) []string {
+// parseCommaSeparated parses a comma-separated list of values (origins,
+// OAuth client IDs, ...), trimming whitespace and dropping empty entries.
+// An empty/unset value returns nil.
+func parseCommaSeparated(raw string) []string {
 	if strings.TrimSpace(raw) == "" {
 		return nil
 	}
 	parts := strings.Split(raw, ",")
-	origins := make([]string, 0, len(parts))
+	values := make([]string, 0, len(parts))
 	for _, part := range parts {
-		origin := strings.TrimSpace(part)
-		if origin != "" {
-			origins = append(origins, origin)
+		value := strings.TrimSpace(part)
+		if value != "" {
+			values = append(values, value)
 		}
 	}
-	return origins
+	return values
 }
 
 // maskURI hides sensitive info (e.g. embedded credentials) for logging.

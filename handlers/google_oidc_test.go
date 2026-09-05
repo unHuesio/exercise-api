@@ -53,21 +53,21 @@ func newTestGoogleOIDCProvider(t *testing.T) (*httptest.Server, *rsa.PrivateKey,
 
 func TestValidateGoogleTokenClaimsRejectsInvalidInputs(t *testing.T) {
 	t.Run("missing subject", func(t *testing.T) {
-		err := ValidateGoogleTokenClaims(GoogleTokenClaims{Email: "user@example.com", EmailVerified: true, Audience: "client-123", Issuer: "https://accounts.google.com", Expiry: time.Now().Add(time.Hour).Unix()}, "client-123", "https://accounts.google.com")
+		err := ValidateGoogleTokenClaims(GoogleTokenClaims{Email: "user@example.com", EmailVerified: true, Audience: "client-123", Issuer: "https://accounts.google.com", Expiry: time.Now().Add(time.Hour).Unix()}, []string{"client-123"}, "https://accounts.google.com")
 		if err == nil {
 			t.Fatal("expected error for missing subject")
 		}
 	})
 
 	t.Run("email not verified", func(t *testing.T) {
-		err := ValidateGoogleTokenClaims(GoogleTokenClaims{Subject: "123", Email: "user@example.com", EmailVerified: false, Audience: "client-123", Issuer: "https://accounts.google.com", Expiry: time.Now().Add(time.Hour).Unix()}, "client-123", "https://accounts.google.com")
+		err := ValidateGoogleTokenClaims(GoogleTokenClaims{Subject: "123", Email: "user@example.com", EmailVerified: false, Audience: "client-123", Issuer: "https://accounts.google.com", Expiry: time.Now().Add(time.Hour).Unix()}, []string{"client-123"}, "https://accounts.google.com")
 		if err == nil {
 			t.Fatal("expected error for unverified email")
 		}
 	})
 
 	t.Run("expired token", func(t *testing.T) {
-		err := ValidateGoogleTokenClaims(GoogleTokenClaims{Subject: "123", Email: "user@example.com", EmailVerified: true, Audience: "client-123", Issuer: "https://accounts.google.com", Expiry: time.Now().Add(-time.Minute).Unix()}, "client-123", "https://accounts.google.com")
+		err := ValidateGoogleTokenClaims(GoogleTokenClaims{Subject: "123", Email: "user@example.com", EmailVerified: true, Audience: "client-123", Issuer: "https://accounts.google.com", Expiry: time.Now().Add(-time.Minute).Unix()}, []string{"client-123"}, "https://accounts.google.com")
 		if err == nil {
 			t.Fatal("expected error for expired token")
 		}
@@ -92,7 +92,7 @@ func TestVerifyGoogleIDTokenAcceptsValidGoogleToken(t *testing.T) {
 		t.Fatalf("sign token: %v", err)
 	}
 
-	claims, err := VerifyGoogleIDToken(context.Background(), tokenString, "client-123", issuerURL)
+	claims, err := VerifyGoogleIDToken(context.Background(), tokenString, []string{"client-123"}, issuerURL)
 	if err != nil {
 		t.Fatalf("expected valid token to verify, got error: %v", err)
 	}
@@ -119,12 +119,12 @@ func TestVerifyGoogleIDTokenWithVerifierReusesProviderSetup(t *testing.T) {
 		t.Fatalf("sign token: %v", err)
 	}
 
-	verifier, err := NewGoogleTokenVerifier(context.Background(), "client-123", issuerURL)
+	verifier, err := NewGoogleTokenVerifier(context.Background(), []string{"client-123"}, issuerURL)
 	if err != nil {
 		t.Fatalf("NewGoogleTokenVerifier() error: %v", err)
 	}
 	for range 2 {
-		if _, err := VerifyGoogleIDTokenWithVerifier(context.Background(), verifier, tokenString, "client-123", issuerURL); err != nil {
+		if _, err := VerifyGoogleIDTokenWithVerifier(context.Background(), verifier, tokenString, []string{"client-123"}, issuerURL); err != nil {
 			t.Fatalf("VerifyGoogleIDTokenWithVerifier() error: %v", err)
 		}
 	}
